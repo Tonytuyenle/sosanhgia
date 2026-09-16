@@ -7,19 +7,12 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-if not exist "node_modules\express" (
-  call npm ci
-  if errorlevel 1 goto failed
-)
-if not exist "dist\index.html" (
-  call npm run build
-  if errorlevel 1 goto failed
-)
 echo.
 echo VU GIA V2 - Mo http://localhost:4173 trong trinh duyet.
 echo Lan dau: tao tai khoan quan tri. Giu cua so nay mo khi su dung.
 echo.
-call npm start
+node scripts/start-local.mjs
+if errorlevel 1 goto failed
 goto end
 :failed
 echo Khong khoi dong duoc. Xem thong bao phia tren.

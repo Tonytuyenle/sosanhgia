@@ -5,7 +5,7 @@
 ## Mở trên máy Windows này
 
 1. Nhấp đúp **CHAY-VU-GIA.cmd** trong thư mục này.
-2. Mở **http://localhost:4173** bằng Chrome hoặc Edge.
+2. Trình duyệt tự mở **http://localhost:4173** khi phần mềm sẵn sàng. Nếu chưa mở, truy cập địa chỉ này bằng Chrome hoặc Edge.
 3. Lần đầu, tạo tài khoản quản trị bằng tên, email và mật khẩu từ 10 ký tự. Không có tài khoản hay mật khẩu mặc định.
 4. Chọn **Nhập dữ liệu Excel → Tải Excel mẫu**, điền dữ liệu rồi nhập. Hoặc chọn **Nạp dữ liệu minh họa** trên Tổng quan khi danh mục trống.
 5. Giữ cửa sổ máy chủ mở khi sử dụng. Nếu máy chủ đã chạy, chỉ cần mở đường dẫn trên, không khởi động thêm lần nữa.

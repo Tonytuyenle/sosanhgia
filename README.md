@@ -4,6 +4,8 @@ Phần mềm Vũ Gia quản lý và so sánh sản phẩm, bảng giá theo hãn
 
 ## Chạy phần mềm
 
+Trên Windows: giải nén dự án rồi nhấp đúp **CHAY-VU-GIA.cmd**. Trình duyệt tự mở khi phần mềm sẵn sàng. Không chạy ứng dụng bằng cách nhấp đúp `index.html`; file này sẽ hiển thị hướng dẫn mở.
+
 Yêu cầu Node.js và npm.
 
 ```sh
