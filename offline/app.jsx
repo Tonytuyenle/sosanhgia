@@ -83,6 +83,58 @@ function ProductImage({ p, large = false, images = {} }) {
   );
 }
 
+function generateAiSalesPitch(p, peers = [], user) {
+  if (!p) return '';
+  const isOwn = D.own(p);
+  const rival = peers[0];
+  const specs = [
+    p.capacity ? `Dung tích: ${p.capacity}` : null,
+    p.power ? `Công suất: ${p.power}` : null,
+    p.material ? `Chất liệu: ${p.material}` : null,
+    p.warranty ? `Bảo hành: ${p.warranty} tháng` : null
+  ].filter(Boolean).join(' | ');
+
+  let pitch = `🔥 KỊCH BẢN TƯ VẤN & ĐÀM PHÁN ĐẠI LÝ — ${p.code} (${p.name})\n`;
+  pitch += `📌 Phân khúc: ${p.category || 'Gia dụng/Thiết bị bếp'} · Thương hiệu: ${p.brand}\n`;
+  pitch += `⚙️ Thông số kỹ thuật: ${specs || 'Đang cập nhật'}\n`;
+  pitch += `💰 Giá niêm yết/online: ${money(p.online)}\n\n`;
+
+  pitch += `🌟 1. ĐIỂM MẠNH VƯỢT TRỘI (USP):\n`;
+  if (p.highlights || p.features) {
+    pitch += `• ${p.highlights || p.features}\n`;
+  }
+  if (p.warranty) {
+    pitch += `• Chính sách bảo hành chính hãng ${p.warranty} tháng tạo sự an tâm tuyệt đối cho đại lý và người tiêu dùng.\n`;
+  }
+  if (p.material) {
+    pitch += `• Chất liệu ${p.material} cao cấp, gia công tỉ mỉ theo tiêu chuẩn xuất khẩu.\n`;
+  }
+
+  if (rival) {
+    pitch += `\n⚔️ 2. ĐỐI ĐẦU TRỰC DIỆN VỚI ${rival.brand} (${rival.code}):\n`;
+    pitch += `• Giá ${rival.brand}: ${money(rival.online)} vs Lock&King: ${money(p.online)}\n`;
+    if (p.online && rival.online) {
+      const diff = rival.online - p.online;
+      if (diff > 0) {
+        pitch += `• Lợi thế giá: Lock&King tối ưu hơn ${money(diff)} (${num(diff / rival.online * 100)}%), giúp đại lý dễ chốt khách thích hàng chất lượng giá hợp lý.\n`;
+      } else {
+        pitch += `• Định vị cao cấp hơn: Giá cao hơn tương xứng với công suất/chất liệu hoàn thiện vượt trội so với đối thủ.\n`;
+      }
+    }
+  }
+
+  pitch += `\n💼 3. LUẬN ĐIỂM CHỐT ĐẠI LÝ / CÔNG TRÌNH:\n`;
+  pitch += `• "Sản phẩm ${p.code} của Lock&King mang lại tỷ suất lợi nhuận gộp hấp dẫn cho đại lý, bảo hành uy tín và nguồn hàng ổn định từ Vũ Gia."\n`;
+  pitch += `• "Hỗ trợ catalogue, hình ảnh truyền thông và đổi mới kỹ thuật trong 30 ngày nếu phát sinh lỗi nhà sản xuất."\n`;
+
+  if (p.financial?.breakEven) {
+    pitch += `\n⚠️ 4. CẢNH BÁO GIÁ SÀN & LỢI NHUẬN:\n`;
+    pitch += `• Giá hòa vốn: ${money(p.financial.breakEven)} | Chiết khấu an toàn: Không bán dưới mức hòa vốn.\n`;
+  }
+
+  return pitch;
+}
+
 const readFile = f => new Promise((resolve, reject) => {
   const r = new FileReader();
   r.onload = () => resolve(r.result);
@@ -405,6 +457,32 @@ export default function App({ loaded, storageError }) {
           <button onClick={() => setToast('')} aria-label="Đóng thông báo"><X size={16} /></button>
         </div>
       )}
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="mobile-bottom-nav">
+        <button className={page === 'dashboard' ? 'active' : ''} onClick={() => navigate('dashboard')}>
+          <LayoutDashboard size={20} />
+          <span>Tổng quan</span>
+        </button>
+        <button className={page === 'brands' ? 'active' : ''} onClick={() => navigate('brands')}>
+          <Building2 size={20} />
+          <span>Hãng</span>
+        </button>
+        <button className={page === 'own' || page === 'rivals' ? 'active' : ''} onClick={() => navigate(page === 'rivals' ? 'rivals' : 'own')}>
+          <Package size={20} />
+          <span>Sản phẩm</span>
+        </button>
+        <button className={page === 'compare' ? 'active' : ''} onClick={() => navigate('compare')}>
+          <ArrowLeftRight size={20} />
+          <span>So sánh</span>
+          {selected.length > 0 && <span className="badge-dot" />}
+        </button>
+        <button onClick={() => setSidebar(true)}>
+          <Menu size={20} />
+          <span>Menu</span>
+          {pendingMatchesCount > 0 && <span className="badge-dot" />}
+        </button>
+      </nav>
     </div>
   );
 }
@@ -1255,10 +1333,37 @@ function ProductDetail(c) {
 
           <div className="tabs">
             <button className={tab === 'details' ? 'active' : ''} onClick={() => setTab('details')}>Chi tiết</button>
+            <button className={tab === 'aiSales' ? 'active' : ''} onClick={() => setTab('aiSales')}>🤖 Trợ lý AI Bán hàng</button>
             <button className={tab === 'prices' ? 'active' : ''} onClick={() => setTab('prices')}>Giá & lợi nhuận</button>
-            <button className={tab === 'matches' ? 'active' : ''} onClick={() => setTab('matches')}>Tương đương</button>
+            <button className={tab === 'matches' ? 'active' : ''} onClick={() => setTab('matches')}>Tương đương ({peers.length})</button>
             <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>Lịch sử</button>
           </div>
+
+          {tab === 'aiSales' && (
+            <section className="detail-section">
+              <div className="ai-copilot-card">
+                <div className="ai-copilot-head">
+                  <h4><Sparkles size={18} /> Kịch bản Bán hàng & Đàm phán Đại lý AI</h4>
+                  <Badge tone="green">Tự động tạo theo dữ liệu</Badge>
+                </div>
+                <div className="ai-script-box">
+                  {generateAiSalesPitch(p, peers, user)}
+                </div>
+                <div className="inline-actions" style={{ marginTop: 14 }}>
+                  <button
+                    className="primary"
+                    onClick={() => {
+                      navigator.clipboard.writeText(generateAiSalesPitch(p, peers, user))
+                        .then(() => notify('Đã sao chép kịch bản đàm phán AI!'))
+                        .catch(() => notify('Không thể sao chép tự động'));
+                    }}
+                  >
+                    <Sparkles size={16} /> Sao chép Kịch bản (Gửi Zalo / Khách)
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
 
           {tab === 'details' && (
             <>
@@ -1942,6 +2047,28 @@ function Comparison(c) {
               <button onClick={() => window.print()}><Printer size={16} />In / PDF</button>
             </div>
           </div>
+
+          {chosen.length >= 2 && (
+            <div className="ai-copilot-card">
+              <div className="ai-copilot-head">
+                <h4><Sparkles size={18} /> Trợ lý AI Đàm phán Đối đầu 1-1</h4>
+                <button
+                  className="primary"
+                  onClick={() => {
+                    const lk = chosen.find(D.own) || chosen[0];
+                    const rivals = chosen.filter(p => p.id !== lk.id);
+                    const script = generateAiSalesPitch(lk, rivals, user);
+                    navigator.clipboard.writeText(script).then(() => notify('Đã sao chép kịch bản đàm phán đối đầu AI!'));
+                  }}
+                >
+                  <Sparkles size={15} /> Sao chép Kịch bản Đàm phán AI
+                </button>
+              </div>
+              <p className="small" style={{ margin: '4px 0 0', color: '#15803d' }}>
+                Tổng hợp tự động điểm mạnh USP của <strong>{chosen[0].code}</strong> so với <strong>{chosen.slice(1).map(p => p.brand + ' ' + p.code).join(', ')}</strong> phục vụ Sales đàm phán với đại lý.
+              </p>
+            </div>
+          )}
 
           <div className="comparison-legend">
             <Badge tone="green">Xanh: Lock&King có lợi thế</Badge>

@@ -1,17 +1,240 @@
-/* Readable working text; compact metadata remains at least 12 px. */
-.sidebar nav button{font-size:13px;line-height:1.5}
-.page-heading p,.notice,.empty p,.login-form>p,.login-form label,.form-grid label,.mapping-grid label,.manual-match>label,.weight-grid label,.finance-selector label{font-size:14px}
-.table-product strong,.product-title,.match-candidate .table-product strong{font-size:14px}
-td,dl>div,.finance-metrics>div,.opportunity-body dl>div{font-size:13px}
-.badge{font-size:12px}.panel-head p,.stat>small,.brand-list small,.table-product small,.card-prices small,.card-specs,.card-meta,.data-status{font-size:12px}
-.card-meta{flex-wrap:wrap}.card-prices{gap:8px}.card-prices strong{font-size:14px}.card-bottom{flex-wrap:wrap}
-.card-bottom small,.card-bottom .text-button,.data-status small{font-size:12px}.card-prices>div{min-width:0}
-.topbar .breadcrumb{min-width:0}.scatter-grid button{font-size:12px;white-space:nowrap}
-.bar-label{font-size:12px;min-width:130px;width:130px}.bar-tracks b{font-size:12px}.bar-tracks span{max-width:calc(100% - 95px)}
-.brand-list strong,.attention strong{font-size:14px}.attention small,.advantage-summary span{font-size:12px}
-.comparison-table td,.comparison-table tbody th{font-size:13px}.comparison-table th,.comparison-table td{width:240px;min-width:240px}
-.report-document p,.report-document td{font-size:13px}.system-note{font-size:12px}.profile strong{font-size:13px}
-.opportunity-body dd{max-width:55%}.results-line{flex-wrap:wrap}
-@media(max-width:1200px){.sidebar nav button{font-size:12px}.card-prices{grid-template-columns:1fr}.card-prices>div{display:flex;justify-content:space-between;gap:6px}.card-prices strong{margin:0;font-size:13px}.bar-label{width:115px;min-width:115px}}
-@media(max-width:760px){.page-heading{flex-direction:column}.heading-actions{flex-direction:row;width:100%;margin-top:8px}.heading-actions button{font-size:13px;flex:1}.page-heading h1{font-size:25px}.breadcrumb{font-size:12px}.breadcrumb>strong{max-width:140px}.product-grid{grid-template-columns:1fr}.product-image{height:190px}.product-title{font-size:16px}.card-body{padding:17px}.card-prices{grid-template-columns:1fr 1fr}.card-prices>div{display:block;text-align:left}.card-prices strong{font-size:16px;margin-top:5px}.card-bottom{flex-direction:row;align-items:center}.card-bottom>div{flex-direction:column;align-items:flex-start}.card-bottom .score{font-size:19px}.data-status,.data-status small{font-size:12px}.data-status small{display:block}.filter-main>button{font-size:0}.sidebar{transition:none}.sidebar nav button{font-size:13px}.bar-label{min-width:95px;width:95px}.bar-tracks b{font-size:10px}.bar-tracks span{max-width:calc(100% - 75px)}.weight-grid{grid-template-columns:1fr 1fr}.weight-grid label{font-size:12px}.legend{flex-wrap:wrap;gap:9px}.report-document td{font-size:12px}.comparison-table .product-title{font-size:14px}}
-@media print{.report-document td,.comparison-table td,.comparison-table tbody th{font-size:8pt}.comparison-table th,.comparison-table td{width:auto;min-width:0}.card-prices strong{font-size:10pt}}
+/* Readability and responsive scaling */
+.sidebar nav button {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.page-heading p, .notice, .empty p, .login-form > p, .login-form label,
+.form-grid label, .mapping-grid label, .manual-match > label,
+.weight-grid label, .finance-selector label {
+  font-size: 13.5px;
+}
+
+.table-product strong, .product-title, .match-candidate .table-product strong {
+  font-size: 14px;
+}
+
+td, dl > div, .finance-metrics > div, .opportunity-body dl > div {
+  font-size: 13px;
+}
+
+.badge {
+  font-size: 11.5px;
+}
+
+.panel-head p, .stat > small, .brand-list small, .table-product small,
+.card-prices small, .card-specs, .card-meta, .data-status {
+  font-size: 12px;
+}
+
+.card-meta {
+  flex-wrap: wrap;
+}
+
+.card-prices {
+  gap: 8px;
+}
+
+.card-prices strong {
+  font-size: 14px;
+}
+
+.card-bottom {
+  flex-wrap: wrap;
+}
+
+.card-bottom small, .card-bottom .text-button, .data-status small {
+  font-size: 12px;
+}
+
+.card-prices > div {
+  min-width: 0;
+}
+
+.topbar .breadcrumb {
+  min-width: 0;
+}
+
+.scatter-grid button {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.bar-label {
+  font-size: 12.5px;
+  min-width: 120px;
+  width: 120px;
+}
+
+.bar-tracks b {
+  font-size: 12px;
+}
+
+.bar-tracks span {
+  max-width: calc(100% - 95px);
+}
+
+.brand-list strong, .attention strong {
+  font-size: 13.5px;
+}
+
+.attention small, .advantage-summary span {
+  font-size: 12px;
+}
+
+.comparison-table td, .comparison-table tbody th {
+  font-size: 13px;
+}
+
+.comparison-table th, .comparison-table td {
+  width: 240px;
+  min-width: 240px;
+}
+
+.report-document p, .report-document td {
+  font-size: 13px;
+}
+
+.system-note {
+  font-size: 12px;
+}
+
+.profile strong {
+  font-size: 13px;
+}
+
+.opportunity-body dd {
+  max-width: 55%;
+}
+
+.results-line {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1200px) {
+  .sidebar nav button {
+    font-size: 12.5px;
+  }
+  .card-prices {
+    grid-template-columns: 1fr;
+  }
+  .card-prices > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .card-prices strong {
+    margin: 0;
+    font-size: 13px;
+  }
+  .bar-label {
+    width: 110px;
+    min-width: 110px;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-heading {
+    flex-direction: column;
+  }
+  .heading-actions {
+    flex-direction: row;
+    width: 100%;
+    margin-top: 8px;
+  }
+  .heading-actions button {
+    font-size: 13px;
+    flex: 1;
+  }
+  .page-heading h1 {
+    font-size: 22px;
+  }
+  .breadcrumb {
+    font-size: 12px;
+  }
+  .breadcrumb > strong {
+    max-width: 140px;
+  }
+  .product-grid {
+    grid-template-columns: 1fr;
+  }
+  .product-image {
+    height: 180px;
+  }
+  .product-title {
+    font-size: 15px;
+  }
+  .card-body {
+    padding: 16px;
+  }
+  .card-prices {
+    grid-template-columns: 1fr 1fr;
+  }
+  .card-prices > div {
+    display: block;
+    text-align: left;
+  }
+  .card-prices strong {
+    font-size: 15px;
+    margin-top: 4px;
+  }
+  .card-bottom {
+    flex-direction: row;
+    align-items: center;
+  }
+  .card-bottom > div {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .card-bottom .score {
+    font-size: 18px;
+  }
+  .data-status, .data-status small {
+    font-size: 12px;
+  }
+  .data-status small {
+    display: block;
+  }
+  .sidebar nav button {
+    font-size: 13px;
+  }
+  .bar-label {
+    min-width: 95px;
+    width: 95px;
+  }
+  .bar-tracks b {
+    font-size: 11px;
+  }
+  .bar-tracks span {
+    max-width: calc(100% - 75px);
+  }
+  .weight-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .weight-grid label {
+    font-size: 12px;
+  }
+  .legend {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .report-document td {
+    font-size: 12px;
+  }
+  .comparison-table .product-title {
+    font-size: 13px;
+  }
+}
+
+@media print {
+  .report-document td, .comparison-table td, .comparison-table tbody th {
+    font-size: 8pt;
+  }
+  .comparison-table th, .comparison-table td {
+    width: auto;
+    min-width: 0;
+  }
+  .card-prices strong {
+    font-size: 10pt;
+  }
+}
