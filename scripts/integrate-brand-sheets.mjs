@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+let ui=fs.readFileSync('src/main.tsx','utf8');
+ui=ui.replace("import './readability.css';", "import './readability.css';\nimport BrandSheets from './BrandSheets';");
+ui=ui.replace("['own','Sản phẩm Lock&King',Package]", "['brands','Danh mục theo hãng',Building2],['own','Sản phẩm Lock&King',Package]");
+ui=ui.replace('import {LayoutDashboard,', 'import {Building2,LayoutDashboard,');
+ui=ui.replace("{page==='dashboard'&&<Dashboard {...ctx}/>} ", "{page==='dashboard'&&<Dashboard {...ctx}/>} ");
+ui=ui.replace("{page==='dashboard'&&<Dashboard {...ctx}/>}","{page==='dashboard'&&<Dashboard {...ctx}/>}\n {page==='brands'&&<BrandSheets {...ctx} renderCatalog={(items,name)=><Catalog key={name} {...ctx} products={items} kind={D.own({brand:name})?'own':'rivals'}/>}/>}");
+fs.writeFileSync('src/main.tsx',ui);
+let server=fs.readFileSync('server/index.js','utf8');
+server=server.replace("import {demoProducts} from './seed.js';", "import {demoProducts} from './seed.js';\nimport {initializeBrands,registerBrandRoutes} from './brands.js';");
+server=server.replace('await db.init();','await db.init();\nawait initializeBrands();');
+server=server.replace("app.use('/api/assets',", "registerBrandRoutes(app);\napp.use('/api/assets',");
+fs.writeFileSync('server/index.js',server);
+let css=fs.readFileSync('src/brands.css','utf8').replace('grid-template-columns:195px minmax(0,1fr));','grid-template-columns:195px minmax(0,1fr);');fs.writeFileSync('src/brands.css',css);

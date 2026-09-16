@@ -1,0 +1,15 @@
+import fs from 'node:fs';
+let domain=fs.readFileSync('shared/domain.js','utf8');
+domain=domain.replace("['npp','Giá NPP','money']", "['npp','Giá NPP Offline','money'],['nppOnline','Giá NPP Online','money'],['marketplacePrice','Giá sàn TMĐT (báo giá)','money'],['quotedNppProfit','Lợi nhuận NPP theo báo giá (chưa trừ phí)','money'],['quotedNppMargin','Biên NPP theo báo giá (%)','percent'],['onlineQuoteDate','Ngày lập báo giá Online','date'],['onlinePriceSource','Nguồn báo giá Online','url']");
+fs.writeFileSync('shared/domain.js',domain);
+let ui=fs.readFileSync('src/main.tsx','utf8');
+ui=ui.replace('<small>Giá NPP</small><strong>{money(p.npp)}</strong>', '<small>Giá NPP Offline</small><strong>{money(p.npp)}</strong>');
+ui=ui.replace('<div><small>Online thấp nhất</small><strong>{money(p.online)}</strong></div>', '<div><small>Giá NPP Online</small><strong>{money(p.nppOnline)}</strong></div>{D.has(p.facebookPrice)&&<div><small>Giá Facebook</small><strong>{money(p.facebookPrice)}</strong></div>}{D.has(p.marketplacePrice)&&<div><small>Giá sàn TMĐT</small><strong>{money(p.marketplacePrice)}</strong></div>}');
+ui=ui.replace('<th>Giá NPP</th><th>Online</th>', '<th>NPP Offline</th><th>NPP Online</th><th>Facebook</th><th>Sàn TMĐT</th>');
+ui=ui.replace('<td>{money(p.npp)}</td><td>{money(p.online)}</td>', '<td>{money(p.npp)}</td><td>{money(p.nppOnline)}</td><td>{money(p.facebookPrice)}</td><td>{money(p.marketplacePrice)}</td>');
+ui=ui.replace("prices:['cost','npp','online','listPrice']", "prices:['cost','npp','nppOnline','facebookPrice','marketplacePrice','online','listPrice']");
+ui=ui.replace("['online','npp'].includes(key)", "['online','npp','nppOnline','facebookPrice','marketplacePrice'].includes(key)");
+fs.writeFileSync('src/main.tsx',ui);
+let server=fs.readFileSync('server/index.js','utf8');
+server=server.replace("D.norm(f.label)===D.norm(h)||D.norm(f.key)===D.norm(h)", "D.norm(f.label)===D.norm(h)||D.norm(f.key)===D.norm(h)||(f.key==='npp'&&D.norm(h)==='gia npp')");
+fs.writeFileSync('server/index.js',server);

@@ -1,0 +1,11 @@
+export function demoProducts(){
+ const base={source:'Dữ liệu minh họa — không dùng ra quyết định thực tế',status:'Đang kinh doanh',stock:'Còn hàng',supplier:'Nhà cung cấp minh họa',origin:'Chưa xác minh',platform:8,tax:1.5,ads:18000,shipping:15000,warrantyCost:5000,gift:0,other:2000,returnCost:30000,discount:0,returns:3,quantity:100,demand:78,quality:82,difference:70,onlinePotential:85,gtPotential:75,service:80,assessmentSource:'Điểm giả định dùng kiểm thử, chưa có khảo sát thị trường',capitalDays:45,inventoryRisk:25,warranty:12,accessories:'Hướng dẫn sử dụng',surveyDate:new Date().toISOString().slice(0,10),demo:true};
+ const pairs=[['Bình thủy điện','Đun và giữ nóng nước','3 l','700 W','Inox','Giữ ấm tự động',690000,449000],['Nồi chiên không dầu','Chiên nướng thực phẩm','6 l','1800 W','Nhựa PP','Điều chỉnh nhiệt độ',1590000,950000],['Ấm siêu tốc','Đun nước','1.8 l','1500 W','Inox','Tự ngắt khi sôi',390000,210000],['Nồi cơm điện','Nấu cơm','1.8 l','700 W','Hợp kim nhôm','Nấu và giữ ấm',790000,480000],['Bình giữ nhiệt','Giữ nhiệt đồ uống','500 ml',null,'Inox','Giữ nóng và lạnh',250000,125000]];
+ const products=[];
+ pairs.forEach(([category,purpose,capacity,power,material,features,price,cost],i)=>{
+  products.push({...base,id:'demo-lk-'+i,code:'LK-'+(301+i),name:category+' Lock&King '+capacity,model:'LK'+(301+i),brand:'Lock&King',category,purpose,capacity,power,material,features,online:price,npp:price*.82,sale:price,cost,listPrice:price*1.15,style:'Dáng tiêu chuẩn',rating:4.7,sold:1200+i*200});
+  products.push({...base,id:'demo-rival-'+i,code:'DT-'+(101+i),name:category+' tham khảo '+capacity,model:'REF'+(101+i),brand:['Thương hiệu A','Thương hiệu B','Thương hiệu C'][i%3],category,purpose,capacity,power,material,features,online:price*1.12,npp:price*.9,sale:price*1.12,cost:null,style:'Dáng tiêu chuẩn',rating:4.6,sold:900+i*100});
+ });
+ products.push({...base,id:'demo-gap',code:'DT-601',model:'REF601',name:'Máy hút ẩm 12 lít — minh họa',brand:'Thương hiệu D',category:'Máy hút ẩm',purpose:'Giảm độ ẩm không khí',capacity:'12 l',power:'200 W',material:'Nhựa ABS',features:'Hẹn giờ và cảm biến độ ẩm',online:3290000,sale:3290000,cost:null,demand:85,inventoryRisk:45});
+ return products;
+}
