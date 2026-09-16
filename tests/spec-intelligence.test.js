@@ -52,3 +52,49 @@ test('findRivalMatches automatically finds matching products from rival brands f
   assert.ok(rivals.some(r => r.product.brand === 'Hare'));
   assert.ok(rivals.some(r => r.product.brand === 'Kailer'));
 });
+
+test('findRivalMatches accurately pairs LK-668 with Hare HR-CD1208 and Yoake YK-CD519', () => {
+  const lk668 = enrichProductSpecs({
+    id: 'lk-668',
+    code: 'LK-668',
+    brand: 'Lock&King',
+    name: 'Tủ sấy quần áo cao cấp Lock&king 1500W',
+    category: 'Thiết bị gia đình',
+    online: 650000
+  });
+
+  const hrCd = enrichProductSpecs({
+    id: 'hr-cd1208',
+    code: 'HR-CD1208',
+    brand: 'Hare',
+    name: 'Máy sấy quần áo Hare HR-CD1208',
+    category: 'Thiết bị gia đình',
+    online: 620000
+  });
+
+  const ykCd = enrichProductSpecs({
+    id: 'yk-cd519',
+    code: 'YK-CD519',
+    brand: 'Yoake',
+    name: 'Máy sấy quần áo Yoake YK-CD519',
+    category: 'Thiết bị gia đình',
+    online: 680000
+  });
+
+  const catalog = [lk668, hrCd, ykCd];
+
+  const sim = D.similarity(lk668, hrCd);
+  assert.ok(sim.score >= 75, `Expected score >= 75 but got ${sim.score}`);
+  assert.equal(D.getProductType(lk668), 'CLOTHES_DRYER');
+  assert.equal(D.getProductType(hrCd), 'CLOTHES_DRYER');
+
+  const rivals = D.findRivalMatches(lk668, catalog, 3);
+  assert.equal(rivals.length, 2);
+  assert.equal(rivals[0].product.brand, 'Hare');
+  assert.equal(rivals[1].product.brand, 'Yoake');
+
+  const candidates = D.candidates(hrCd, catalog);
+  assert.ok(candidates.length >= 1);
+  assert.equal(candidates[0].id, 'lk-668');
+});
+

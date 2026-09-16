@@ -83,11 +83,20 @@ export const MODEL_KNOWLEDGE_BASE = {
   'LK-EP250': { capacity: '1.0 L', power: '250 W', material: 'Trục vít Inox 304 + Nhựa Tritan không chứa BPA', features: 'Máy ép chậm miệng lớn ép nguyên quả, nước ép không phân tầng, bã khô kiệt' },
   'LK-XT500': { capacity: '2.5 L', power: '500 W', material: 'Cối Inox 304 + Lưỡi dao 4 cánh inox', features: 'Máy xay thịt đa năng 2 tốc độ xay, xay nhuyễn thịt, tôm cua cá chỉ trong 10 giây' },
 
+  // Lock&King Clothes Dryers
+  'LK-668': { power: '1500 W', dimensions: '70 × 45 × 150 cm', capacity: 'Chịu tải 15 kg', material: 'Khung Inox chịu lực + Vải Oxford chịu nhiệt', purpose: 'Tủ sấy quần áo cao cấp Lock&king 1500W', features: 'Tủ sấy quần áo 2 tầng khung inox chịu lực, sấy nhiệt PTC diệt khuẩn khử mùi 99.9%, hẹn giờ sấy tự động 180 phút', technology: 'Công nghệ sấy nhiệt đối lưu PTC 360 độ, phát ion âm diệt khuẩn', safety: 'Rơ-le chống quá nhiệt tự ngắt, vỏ máy chống cháy chịu nhiệt' },
+  'LK-688': { power: '2400 W', dimensions: '90 × 45 × 170 cm', capacity: 'Chịu tải 20 kg', material: 'Khung Inox chịu lực + Vải Oxford chịu nhiệt', purpose: 'Tủ sấy quần áo cao cấp Lock&king 2400W', features: 'Tủ sấy quần áo khung inox 2 tầng chịu tải 20kg, công suất lớn 2400W sấy siêu nhanh, điều khiển từ xa thông minh', technology: 'Công nghệ sấy nhiệt Turbo PTC kép, điều khiển từ xa Wireless, diệt khuẩn UV', safety: 'Bảo vệ kép chống quá nhiệt và chập điện' },
+
   // Hare models
-  'HR-CD1208': { capacity: '1.8 L', power: '700 W', material: 'Lòng nồi nhôm phủ chống dính cao cấp', features: 'Nồi cơm điện cơ dung tích 1.8L nắp gài, giữ ấm 12 tiếng' },
+  'HR-CD1208': { power: '1800 W', dimensions: '90 × 45 × 170 cm', capacity: 'Chịu tải 20 kg', material: 'Khung Inox chịu lực + Vải Oxford chịu nhiệt', purpose: 'Máy sấy quần áo Hare HR-CD1208', features: 'Máy sấy quần áo Hare gió xoay 360 độ yên tĩnh không ồn, hiệu quả làm khô nhanh tải trọng 20kg', technology: 'Gió xoay 360 độ tản nhiệt đều, động cơ vận hành êm ái chống ồn', safety: 'Tự ngắt khi quá nhiệt, chống nước chuẩn an toàn' },
+  'HR-DF2532': { power: '320 W', capacity: 'Hút ẩm 25 L/ngày', material: 'Nhựa ABS cao cấp chống cháy', purpose: 'Máy hút ẩm Hare HR-DF2532', features: 'Máy hút ẩm đa năng lọc không khí, sấy khô quần áo nhanh chóng, bình chứa lớn tự ngắt khi đầy nước', technology: 'Máy nén biến tần Inverter cao cấp, màng lọc ion bạc kháng khuẩn', safety: 'Tự ngắt khi đầy bình nước, chống tràn thông minh' },
   'HR-EK1801': { capacity: '1.8 L', power: '1500 W', material: 'Inox 304 2 lớp chống nóng', features: 'Ấm siêu tốc 1.8L đun nhanh, tự ngắt khi sôi' },
   'HR-AF65': { capacity: '6.5 L', power: '1500 W', material: 'Khay chiên chống dính teflon', features: 'Nồi chiên không dầu điều khiển cơ, chỉnh nhiệt độ 80-200 độ C' },
   'HR-XT350': { capacity: '2.0 L', power: '350 W', material: 'Cối thủy tinh chịu lực', features: 'Máy xay thịt 2L cối thủy tinh, lưỡi dao kép sắc bén' },
+
+  // Yoake models
+  'YK-CD519': { power: '1800 W', dimensions: '90 × 45 × 170 cm', capacity: 'Chịu tải 20 kg', material: 'Khung Inox chịu lực + Vải Oxford chịu nhiệt', purpose: 'Máy sấy quần áo Yoake YK-CD519', features: 'Máy sấy quần áo Yoake công suất 1800W sấy nhanh chống nhăn, khung inox 2 tầng chắc chắn', technology: 'Công nghệ sấy nhiệt đa chiều, chống nhăn quần áo', safety: 'Cảm biến ngắt nhiệt an toàn tự động' },
+  'YK-HD556': { power: '1600 W', material: 'Nhựa ABS chịu nhiệt cao cấp', purpose: 'Máy sấy tóc Yoake YK-HD556', features: 'Máy sấy tóc 2 tốc độ tùy chỉnh kèm chế độ sấy mát bảo vệ tóc, tay cầm gấp gọn tiện lợi', technology: 'Động cơ Turbo AC gió xoáy, công nghệ ion âm bảo vệ biểu bì tóc', safety: 'Tự ngắt khi quá nhiệt' },
 
   // Morico models
   'MTM522': { capacity: '520 ml', material: 'Inox 316 cao cấp 2 lớp chân không', features: 'Cốc giữ nhiệt thời trang giữ nóng 12h giữ lạnh 24h, nắp chống tràn' },
@@ -136,9 +145,7 @@ export function enrichProductSpecs(p) {
 
   if (known) {
     for (const [key, val] of Object.entries(known)) {
-      if (!D.has(clone[key])) {
-        clone[key] = val;
-      }
+      clone[key] = val;
     }
   }
 
@@ -161,32 +168,47 @@ export function enrichProductSpecs(p) {
     }
   }
 
-  // 2. Extract Capacity (Dung tích: L, ml)
+  // 2. Extract Capacity (Dung tích: L, ml, kg)
   if (!D.has(clone.capacity)) {
-    const capMatch = text.match(/(?:dung\s*tích|capacity|thể\s*tích|size|cỡ)[:\s]*(\d+(?:[.,]\d+)?)\s*(l|lít|lit|ml)/i) ||
-      text.match(/(\d+(?:[.,]\d+)?)\s*(?:l|lít|lit|ml)(?!\w)/i);
-    if (capMatch) {
-      const val = Number(capMatch[1].replace(',', '.'));
-      const unit = (capMatch[2] || 'l').toLowerCase();
-      clone.capacity = unit === 'ml' ? (val >= 1000 ? (val / 1000) + ' L' : val + ' ml') : val + ' L';
+    const kgMatch = text.match(/(?:chịu\s*tải|khối\s*lượng\s*sấy|tải\s*trọng)[:\s]*(\d+(?:[.,]\d+)?)\s*(kg|cân)/i) ||
+      text.match(/(\d+)\s*(?:kg)\s*(?:khối\s*lượng\s*sấy|sấy)/i);
+    if (kgMatch) {
+      clone.capacity = `Chịu tải ${kgMatch[1]} kg`;
     } else {
-      // Heuristics based on product category & name
-      if (/ấm|bình\s*đun/i.test(text)) clone.capacity = '1.8 L';
-      else if (/cốc|bình\s*giữ\s*nhiệt/i.test(text)) clone.capacity = '500 ml';
-      else if (/nồi\s*cơm/i.test(text)) clone.capacity = '1.8 L';
-      else if (/nồi\s*áp\s*suất/i.test(text)) clone.capacity = '5.0 L';
-      else if (/nồi\s*chiên/i.test(text)) clone.capacity = '6.5 L';
-      else if (/máy\s*xay\s*thịt/i.test(text)) clone.capacity = '2.0 L';
-      else if (/máy\s*ép/i.test(text)) clone.capacity = '800 ml';
+      const capMatch = text.match(/(?:dung\s*tích|capacity|thể\s*tích|size|cỡ)[:\s]*(\d+(?:[.,]\d+)?)\s*(l|lít|lit|ml)/i) ||
+        text.match(/(\d+(?:[.,]\d+)?)\s*(?:l|lít|lit|ml)(?!\w)/i);
+      if (capMatch) {
+        const val = Number(capMatch[1].replace(',', '.'));
+        const unit = (capMatch[2] || 'l').toLowerCase();
+        clone.capacity = unit === 'ml' ? (val >= 1000 ? (val / 1000) + ' L' : val + ' ml') : val + ' L';
+      } else {
+        // Heuristics based on product category & name
+        if (/sấy\s*quần\s*áo|tủ\s*sấy/i.test(text)) clone.capacity = 'Chịu tải 15-20 kg';
+        else if (/hút\s*ẩm/i.test(text)) clone.capacity = 'Hút ẩm 20-25 L/ngày';
+        else if (/ấm|bình\s*đun/i.test(text)) clone.capacity = '1.8 L';
+        else if (/cốc|bình\s*giữ\s*nhiệt/i.test(text)) clone.capacity = '500 ml';
+        else if (/nồi\s*cơm/i.test(text)) clone.capacity = '1.8 L';
+        else if (/nồi\s*áp\s*suất/i.test(text)) clone.capacity = '5.0 L';
+        else if (/nồi\s*chiên/i.test(text)) clone.capacity = '6.5 L';
+        else if (/máy\s*xay\s*thịt/i.test(text)) clone.capacity = '2.0 L';
+        else if (/máy\s*ép/i.test(text)) clone.capacity = '800 ml';
+      }
     }
   }
 
   // 3. Extract Dimensions / Diameter (Kích thước / Đường kính: cm, mm)
   if (!D.has(clone.dimensions)) {
-    const dimMatch = text.match(/(?:đường\s*kính|size|kích\s*thước|đk|size\s*nồi)[:\s]*(\d+(?:[.,]\d+)?)\s*(cm|mm)/i) ||
-      text.match(/(\d{2})\s*(?:cm)(?!\w)/i);
-    if (dimMatch) {
-      clone.dimensions = dimMatch[1] + ' ' + (dimMatch[2] || 'cm');
+    const dim3DMatch = text.match(/(?:kích\s*thước|kt)[:\s]*(\d+)\s*[xX*×]\s*(\d+)\s*[xX*×]\s*(\d+)\s*(cm|mm)?/i) ||
+      text.match(/(\d+)\s*[xX*×]\s*(\d+)\s*[xX*×]\s*(\d+)\s*(cm|mm)/i);
+    if (dim3DMatch) {
+      const u = dim3DMatch[4] || 'cm';
+      clone.dimensions = `${dim3DMatch[1]} × ${dim3DMatch[2]} × ${dim3DMatch[3]} ${u}`;
+    } else {
+      const dimMatch = text.match(/(?:đường\s*kính|size|kích\s*thước|đk|size\s*nồi)[:\s]*(\d+(?:[.,]\d+)?)\s*(cm|mm)/i) ||
+        text.match(/(\d{2})\s*(?:cm)(?!\w)/i);
+      if (dimMatch) {
+        clone.dimensions = dimMatch[1] + ' ' + (dimMatch[2] || 'cm');
+      }
     }
   }
 
@@ -203,7 +225,8 @@ export function enrichProductSpecs(p) {
 
   // 5. Extract Material (Chất liệu)
   if (!D.has(clone.material)) {
-    if (/inox\s*316/i.test(text)) clone.material = 'Inox 316 cao cấp kháng khuẩn';
+    if (/sấy\s*quần\s*áo|tủ\s*sấy/i.test(text)) clone.material = 'Khung Inox chịu lực + Vải Oxford chịu nhiệt';
+    else if (/inox\s*316/i.test(text)) clone.material = 'Inox 316 cao cấp kháng khuẩn';
     else if (/inox\s*304/i.test(text)) clone.material = 'Inox 304 không gỉ cao cấp';
     else if (/inox\s*430/i.test(text)) clone.material = 'Inox 430 bắt từ tiêu chuẩn';
     else if (/gốm|ceramic/i.test(text)) clone.material = 'Lòng tráng men Ceramic chống dính';
@@ -268,7 +291,9 @@ export function enrichProductSpecs(p) {
 
   // 11. Purpose (Công dụng chính)
   if (!D.has(clone.purpose)) {
-    if (/nồi\s*lẻ|nồi\s*canh/i.test(text)) clone.purpose = 'Nấu canh, hầm, luộc đa năng cho gia đình';
+    if (/sấy\s*quần\s*áo|tủ\s*sấy/i.test(text)) clone.purpose = 'Sấy khô và diệt khuẩn quần áo';
+    else if (/hút\s*ẩm/i.test(text)) clone.purpose = 'Hút ẩm và lọc không khí gia đình';
+    else if (/nồi\s*lẻ|nồi\s*canh/i.test(text)) clone.purpose = 'Nấu canh, hầm, luộc đa năng cho gia đình';
     else if (/quánh/i.test(text)) clone.purpose = 'Nấu cháo, quấy bột em bé, nấu sốt gia vị';
     else if (/chảo/i.test(text)) clone.purpose = 'Chiên, xào, rán thực phẩm chống dính';
     else if (/ấm|bình\s*đun/i.test(text)) clone.purpose = 'Đun nước sôi pha trà, cà phê, sữa';

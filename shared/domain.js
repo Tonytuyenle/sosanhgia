@@ -46,18 +46,113 @@ export function normalizeProduct(p){
  }
  return {data,warnings};
 }
-const synonym = s => norm(s).replace(/thep khong gi|stainless steel/g,'inox').replace(/nhua pp|polypropylene/g,'pp');
+export const PRODUCT_PATTERNS = [
+  ['DEHUMIDIFIER', /hút ẩm|máy hút ẩm|hut am/i],
+  ['CLOTHES_DRYER', /sấy quần áo|tủ sấy|máy sấy quần áo|tu say|may say quan ao/i],
+  ['HAIR_DRYER', /sấy tóc|máy sấy tóc|may say toc|máy sất tóc/i],
+  ['HEATER', /sưởi|máy sưởi|quạt sưởi|đèn sưởi|suoi/i],
+  ['FAN', /quạt|quat/i],
+  ['KETTLE', /ấm siêu tốc|bình siêu tốc|am sieu toc|binh sieu toc|ấm đun|am dun|ấm điện/i],
+  ['THERMO_POT', /bình thủy|binh thuy|phích điện/i],
+  ['THERMOS', /bình giữ nhiệt|cốc giữ nhiệt|ly giữ nhiệt|binh giu nhiet|coc giu nhiet|phích giữ nhiệt/i],
+  ['AIR_FRYER', /nồi chiên|noi chien|chiên không dầu|lò chiên|lò nướng|lo nuong/i],
+  ['RICE_COOKER', /nồi cơm|noi com|cơm điện|com dien|cơm lòng niêu/i],
+  ['PRESSURE_COOKER', /nồi áp suất|noi ap suat|áp suất điện|ap suat/i],
+  ['ELECTRIC_HOTPOT', /nồi lẩu điện|lẩu điện|noi lau dien|lẩu đa năng|nồi nấu đa năng|noi da nang|lẩu đi kèm xửng hấp/i],
+  ['SLOW_COOKER', /nồi nấu chậm|noi nau cham|nồi kho cá|noi kho ca/i],
+  ['SOY_MILK_MAKER', /sữa hạt|sua hat|làm sữa hạt|nấu sữa hạt/i],
+  ['SLOW_JUICER', /máy ép chậm|may ep cham|máy ép trái cây|máy ép hoa quả|máy ép|may ep/i],
+  ['CITRUS_JUICER', /vắt cam|vat cam|máy vắt cam/i],
+  ['BLENDER_CHOPPER', /máy xay|may xay|xay thịt|xay sinh tố|xay đa năng|xay tỏi/i],
+  ['EGG_BEATER', /đánh trứng|trộn bột/i],
+  ['INDUCTION_COOKER', /bếp từ|bep tu|bếp đôi|bep doi|bếp đơn|bep don/i],
+  ['INFRARED_COOKER', /bếp hồng ngoại|bep hong ngoai/i],
+  ['POT_SET', /bộ nồi|bo noi|bộ 3 nồi|bo 3 noi|bộ 4 nồi|bộ 5 nồi/i],
+  ['PAN', /chảo|chao/i],
+  ['SINGLE_POT', /nồi lẻ|noi le|quánh|quanh|nồi luộc gà|noi luoc ga|nồi canh|noi canh|nồi inox|noi inox|nồi nhỡ|nồi lẩu|nồi/i],
+  ['KNIFE_SET', /dao|bộ dao|bo dao/i],
+  ['CHOPPING_BOARD', /thớt|thot/i],
+  ['LUNCH_BOX', /hộp cơm|hop com|cặp lồng|hộp canh/i],
+  ['VACUUM_CLEANER', /hút bụi|hut bui|máy hút bụi/i],
+  ['IRON', /bàn là|bàn ủi|ban la|ban ui/i],
+  ['POWER_SOCKET', /ổ cắm|o cam|ổ cắm điện/i]
+];
+
+export function getProductType(p) {
+  if (!p) return 'UNKNOWN';
+  const text = [p.name, p.code, p.category, p.purpose, p.description].filter(Boolean).join(' ');
+  for (const [type, regex] of PRODUCT_PATTERNS) {
+    if (regex.test(text)) return type;
+  }
+  return 'UNKNOWN';
+}
+
+const synonym = s => norm(s).replace(/thep khong gi|stainless steel/g,'inox').replace(/nhua pp|polypropylene/g,'pp').replace(/vai oxford|vai bat/g,'oxford').replace(/chong dinh ceramic|men gom/g,'ceramic');
 const equal = (a,b)=>has(a)&&has(b)&&synonym(a)===synonym(b);
-const near = (a,b,kind)=>{a=unit(a,kind);b=unit(b,kind);if(a===null||b===null)return false;if(Array.isArray(a))return Array.isArray(b)&&a.length===b.length&&a.every((v,i)=>Math.abs(v-b[i])/Math.max(v,b[i],1)<=.15);return Math.abs(a-b)/Math.max(a,b,1)<=.15;};
+const near = (a,b,kind)=>{
+  a=unit(a,kind);b=unit(b,kind);
+  if(a===null||b===null)return false;
+  if(Array.isArray(a))return Array.isArray(b)&&a.length===b.length&&a.every((v,i)=>Math.abs(v-b[i])/Math.max(v,b[i],1)<=.25);
+  const tol = kind === 'power' ? 0.35 : kind === 'dimensions' ? 0.25 : 0.25;
+  return Math.abs(a-b)/Math.max(a,b,1)<=tol;
+};
+
 export function similarity(a,b){
- const criteria=[['Nhóm sản phẩm',20,equal(a.category,b.category)],['Công dụng',15,equal(a.purpose,b.purpose)],['Dung tích / kích thước',15,near(a.capacity,b.capacity,'capacity')||near(a.dimensions,b.dimensions,'dimensions')],['Công suất',10,near(a.power,b.power,'power')],['Chất liệu',10,equal(a.material,b.material)],['Tính năng chính',10,equal(a.features,b.features)],['Phân khúc giá',10,has(a.online)&&has(b.online)&&a.online>0&&b.online>0&&Math.abs(a.online-b.online)/Math.max(a.online,b.online)<=.25],['Bảo hành và phụ kiện',5,equal(a.warranty,b.warranty)&&equal(a.accessories,b.accessories)],['Kiểu dáng đã xác nhận',5,equal(a.style,b.style)]];
- const score=criteria.reduce((s,c)=>s+(c[2]?c[1]:0),0);
- return {score,criteria:criteria.map(([label,max,matched])=>({label,max,points:matched?max:0})),reason:criteria.filter(c=>c[2]).map(c=>c[0]).join(' · '),level:score>=85?'Rất tương đồng':score>=70?'Có thể so sánh':score>=50?'Tương đồng một phần, cần duyệt':'Không ghép tự động'};
+  const typeA = getProductType(a), typeB = getProductType(b);
+  if (typeA !== 'UNKNOWN' && typeB !== 'UNKNOWN' && typeA !== typeB) {
+    const criteria = [
+      ['Nhóm sản phẩm', 20, false],
+      ['Công dụng', 15, false],
+      ['Dung tích / kích thước', 15, false],
+      ['Công suất', 10, false],
+      ['Chất liệu', 10, false],
+      ['Tính năng chính', 10, false],
+      ['Phân khúc giá', 10, false],
+      ['Bảo hành và phụ kiện', 5, false],
+      ['Kiểu dáng đã xác nhận', 5, false]
+    ];
+    return {
+      score: 0,
+      criteria: criteria.map(([label, max]) => ({label, max, points: 0})),
+      reason: 'Khác chủng loại sản phẩm',
+      level: 'Không ghép tự động'
+    };
+  }
+  const sameType = (typeA !== 'UNKNOWN' && typeA === typeB);
+  
+  const sameCat = equal(a.category, b.category) || (sameType && has(a.category) && has(b.category));
+  const samePurpose = equal(a.purpose, b.purpose) || sameType || (has(a.purpose) && has(b.purpose) && (norm(a.purpose).includes(norm(b.purpose)) || norm(b.purpose).includes(norm(a.purpose))));
+  const sameSize = near(a.capacity, b.capacity, 'capacity') || near(a.dimensions, b.dimensions, 'dimensions') || (sameType && ['CLOTHES_DRYER', 'KETTLE', 'HAIR_DRYER', 'HEATER'].includes(typeA));
+  const samePower = near(a.power, b.power, 'power') || (sameType && !has(a.power) && !has(b.power));
+  const sameMaterial = equal(a.material, b.material) || (has(a.material) && has(b.material) && (norm(a.material).includes('inox') && norm(b.material).includes('inox') || norm(a.material).includes('ceramic') && norm(b.material).includes('ceramic') || norm(a.material).includes('oxford') && norm(b.material).includes('oxford') || norm(a.material).includes('thuy tinh') && norm(b.material).includes('thuy tinh'))) || sameType;
+  const sameFeatures = equal(a.features, b.features) || sameType;
+  const samePrice = has(a.online) && has(b.online) && a.online > 0 && b.online > 0 && Math.abs(a.online - b.online) / Math.max(a.online, b.online) <= 0.25;
+  const sameWarrantyAcc = equal(a.warranty, b.warranty) && equal(a.accessories, b.accessories);
+  const sameStyle = equal(a.style, b.style);
+
+  const criteria = [
+    ['Nhóm sản phẩm', 20, sameCat],
+    ['Công dụng', 15, samePurpose],
+    ['Dung tích / kích thước', 15, sameSize],
+    ['Công suất', 10, samePower],
+    ['Chất liệu', 10, sameMaterial],
+    ['Tính năng chính', 10, sameFeatures],
+    ['Phân khúc giá', 10, samePrice],
+    ['Bảo hành và phụ kiện', 5, sameWarrantyAcc],
+    ['Kiểu dáng đã xác nhận', 5, sameStyle]
+  ];
+  const score = criteria.reduce((s, c) => s + (c[2] ? c[1] : 0), 0);
+  return {
+    score,
+    criteria: criteria.map(([label, max, matched]) => ({label, max, points: matched ? max : 0})),
+    reason: criteria.filter(c => c[2]).map(c => c[0]).join(' · '),
+    level: score >= 85 ? 'Rất tương đồng' : score >= 70 ? 'Có thể so sánh' : score >= 50 ? 'Tương đồng một phần, cần duyệt' : 'Không ghép tự động'
+  };
 }
 export const matchingRequired=['category','purpose','material','features'];
-export const completeForMatching = p=>matchingRequired.every(k=>has(p[k]))&&(has(p.capacity)||has(p.dimensions));
+export const completeForMatching = p=>matchingRequired.every(k=>has(p[k]))&&(has(p.capacity)||has(p.dimensions)||has(p.power));
 export function candidates(p,products){return products.filter(q=>own(q)&&(!p.id||q.id!==p.id)).map(q=>({id:q.id,...similarity(p,q)})).filter(q=>q.score>=50).sort((a,b)=>b.score-a.score).slice(0,3);}
-export function findRivalMatches(p,products,limit=4){if(!p)return [];const rivals=products.filter(q=>!own(q)&&(!p.id||q.id!==p.id));const scored=rivals.map(q=>{const sim=similarity(p,q);const catBonus=(p.category&&q.category&&norm(p.category)===norm(q.category))?15:0;return {product:q,id:q.id,score:sim.score+catBonus,rawScore:sim.score,reason:sim.reason,level:sim.level,criteria:sim.criteria};}).filter(x=>x.score>=35).sort((a,b)=>b.score-a.score);const seenBrands=new Set();const diverse=[];for(const item of scored){if(!seenBrands.has(item.product.brand)&&diverse.length<limit){seenBrands.add(item.product.brand);diverse.push(item);}}for(const item of scored){if(diverse.length>=limit)break;if(!diverse.some(d=>d.id===item.id))diverse.push(item);}return diverse;}
+export function findRivalMatches(p,products,limit=4){if(!p)return [];const rivals=products.filter(q=>!own(q)&&(!p.id||q.id!==p.id));const scored=rivals.map(q=>{const sim=similarity(p,q);const catBonus=(p.category&&q.category&&norm(p.category)===norm(q.category))?10:0;return {product:q,id:q.id,score:Math.min(100,sim.score+catBonus),rawScore:sim.score,reason:sim.reason,level:sim.level,criteria:sim.criteria};}).filter(x=>x.score>=45).sort((a,b)=>b.score-a.score);const seenBrands=new Set();const diverse=[];for(const item of scored){if(!seenBrands.has(item.product.brand)&&diverse.length<limit){seenBrands.add(item.product.brand);diverse.push(item);}}for(const item of scored){if(diverse.length>=limit)break;if(!diverse.some(d=>d.id===item.id))diverse.push(item);}return diverse;}
 export function gap(p,products){if(candidates(p,products).length)return null;const local=products.filter(own);return local.length&&local.every(completeForMatching)&&completeForMatching(p)?'confirmed':'incomplete';}
 export const financeRequired=['cost','sale','platform','ads','shipping','warrantyCost','gift','tax','other','discount','returns','quantity'];
 export function finance(p,target=20){

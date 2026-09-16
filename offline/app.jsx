@@ -1087,7 +1087,7 @@ function Catalog(c) {
                   </div>
                   <button onClick={() => setDetail(p.id)} className="text-button">
                     {D.own(p)
-                      ? products.filter(q => !D.own(q) && q.matching?.some(m => m.id === p.id)).length
+                      ? (D.findRivalMatches(p, products, 4).length || products.filter(q => !D.own(q) && q.matching?.some(m => m.id === p.id)).length)
                       : p.matching?.length || 0} tương đương
                     <ChevronRight size={14} />
                   </button>
