@@ -58,7 +58,10 @@ const imageURL = (src, images = {}) => {
   if (!src) return '';
   if (images[src]) return images[src];
   if (/^(https?:|data:image\/(png|jpeg|webp|gif);base64,)/i.test(src)) return src;
-  return '';
+  if (src.startsWith('/api/assets/')) {
+    return './data/assets/' + src.slice('/api/assets/'.length);
+  }
+  return src;
 };
 
 function ProductImage({ p, large = false, images = {} }) {
