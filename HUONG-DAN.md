@@ -1,6 +1,18 @@
 # Phần mềm so sánh sản phẩm Vũ Gia — V2
 
-Ứng dụng HTML/React tiếng Việt, máy chủ Node.js và cơ sở dữ liệu lưu thực. Không mở trực tiếp `index.html` bằng cách nhấp đúp: đăng nhập, Excel và lưu dữ liệu cần máy chủ đang chạy.
+## Bản HTML mở trực tiếp
+
+Nhấp đúp **index.html** bằng Chrome hoặc Edge để mở bản cá nhân, không cần chạy server. Trên máy này, **BAN-OFFLINE/index.html** chứa sẵn danh mục và ảnh trong một tệp duy nhất, có thể sao chép sang máy khác.
+
+- Dùng các tab hãng, tìm kiếm, chọn sản phẩm để so sánh; thêm/sửa sản phẩm và chọn ảnh từ máy.
+- Vào **Sao lưu & nhập dữ liệu** để nhập Excel, xuất mỗi hãng một sheet hoặc sao lưu/khôi phục JSON.
+- Dữ liệu chỉnh sửa được lưu trong trình duyệt đang dùng. Tải bản sao lưu JSON để chuyển cả giá và ảnh sang máy khác; không xóa dữ liệu duyệt web trước khi sao lưu.
+- Bản này không có tài khoản, phân quyền nhiều người hay tự đồng bộ với cơ sở dữ liệu của bản server.
+- Bản tải từ GitHub không có dữ liệu kinh doanh riêng; nhập Excel hoặc khôi phục JSON để nạp danh mục.
+
+## Bản server có đăng nhập và phân quyền
+
+Các hướng dẫn tiếp theo dành cho bản server Node.js và cơ sở dữ liệu SQLite/PostgreSQL.
 
 ## Mở trên máy Windows này
 

@@ -1,0 +1,35 @@
+import {chromium} from 'playwright';
+import assert from 'node:assert/strict';
+import path from 'node:path';
+import fs from 'node:fs';
+import {pathToFileURL} from 'node:url';
+import * as XLSX from 'xlsx';
+const browser=await chromium.launch({headless:true,channel:'msedge'});
+const context=await browser.newContext({acceptDownloads:true});
+const page=await context.newPage();const errors=[],network=[];
+page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/^https?:/.test(r.url()))network.push(r.url());});
+try{
+ await page.goto(pathToFileURL(path.resolve('BAN-OFFLINE/index.html')).href,{waitUntil:'load',timeout:120000});
+ await page.getByRole('heading',{name:'Danh mục sản phẩm'}).waitFor({timeout:120000});
+ assert.ok((await page.locator('.heading').innerText()).includes('363 sản phẩm'));
+ await page.getByLabel('Tìm sản phẩm').fill('HR-CD1208');
+ const card=page.locator('article');await card.waitFor();assert.equal(await card.count(),1);
+ assert.match(await card.innerText(),/690.000/);assert.match(await card.innerText(),/1.190.000/);
+ await card.locator('img').evaluate(img=>img.decode());
+ await card.getByRole('checkbox').check();
+ await page.getByLabel('Tìm sản phẩm').fill('1500W');
+ const own=page.locator('article').filter({hasText:'Lock&King'}).first();await own.getByRole('checkbox').check();
+ await page.getByRole('button',{name:'So sánh (2)',exact:true}).click();
+ const priceRow=page.locator('tr').filter({has:page.locator('th').filter({hasText:/^Giá NPP \/ phân phối$/})}).first();
+ assert.match(await priceRow.innerText(),/460.000/);assert.match(await priceRow.innerText(),/690.000/);
+ await page.screenshot({path:'tmp/offline-comparison.png',fullPage:false});
+ await page.getByRole('button',{name:'Sao lưu & nhập dữ liệu',exact:true}).click();
+ const downloadEvent=page.waitForEvent('download');await page.getByRole('button',{name:'Xuất tất cả hãng',exact:true}).click();const download=await downloadEvent;const wb=XLSX.read(fs.readFileSync(await download.path()));
+ assert.ok(wb.SheetNames.includes('Hare'));const rows=XLSX.utils.sheet_to_json(wb.Sheets.Hare);assert.equal(rows.find(p=>p['Mã sản phẩm']==='HR-CD1208')['Giá NPP / phân phối (báo giá)'],690000);
+ await page.getByRole('button',{name:'+ Thêm sản phẩm',exact:true}).click();
+ await page.getByLabel('Mã sản phẩm',{exact:true}).fill('OFFLINE-TEST');await page.getByLabel('Tên sản phẩm',{exact:true}).fill('Kiểm thử lưu offline');await page.getByLabel('Thương hiệu',{exact:true}).fill('Test');await page.getByLabel('Nhóm ngành hàng',{exact:true}).fill('Test');
+ await page.getByRole('button',{name:'Lưu sản phẩm',exact:true}).click();await page.locator('.overlay').waitFor({state:'hidden'});
+ await page.reload({waitUntil:'load',timeout:120000});await page.getByLabel('Tìm sản phẩm').fill('OFFLINE-TEST');await page.locator('article').waitFor();assert.equal(await page.locator('article').count(),1);
+ assert.deepEqual(errors,[]);assert.deepEqual(network,[]);
+ console.log(JSON.stringify({products:363,priceRow:'Lock&King 460000 / Hare 690000',excelSheets:wb.SheetNames.length,persistence:'passed',httpRequests:network.length,errors}));
+}finally{await context.close();await browser.close();}
