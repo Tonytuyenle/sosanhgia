@@ -7,7 +7,7 @@ import {populatedPriceFields} from '../shared/price-comparison.js';
 fs.mkdirSync('offline-built',{recursive:true});
 await build({entryPoints:['offline/app.jsx'],bundle:true,minify:true,format:'iife',target:['chrome100','edge100'],outfile:'offline-built/app.js',define:{'process.env.NODE_ENV':'"production"'},legalComments:'none'});
 const css=fs.readFileSync('offline-built/app.css','utf8'),js=fs.readFileSync('offline-built/app.js','utf8');
-const html=seed=>`<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Vũ Gia · So sánh sản phẩm</title><style>${css}</style></head><body><div id="root">Đang mở phần mềm…</div>${seed}<script>${js.replace(/<\/script/gi,'<\\/script')}</script></body></html>`;
+const html=seed=>`<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Vũ Gia · So sánh sản phẩm</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>${css}</style></head><body><div id="root">Đang mở phần mềm…</div>${seed}<script>${js.replace(/<\/script/gi,'<\\/script')}</script></body></html>`;
 fs.writeFileSync('index.html',html('<script src="data/offline-seed.js"></script>'));
 if(process.argv.includes('--with-data')){
  const SQL=await initSqlJs(),db=new SQL.Database(fs.readFileSync('data/vugia.sqlite'));
