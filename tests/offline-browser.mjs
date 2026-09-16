@@ -43,16 +43,18 @@ try {
   console.log('4. Navigating to own...');
   await page.locator('.sidebar nav button').filter({hasText: 'Sản phẩm Lock&King'}).click();
   await page.locator('.page-heading h1:has-text("Sản phẩm Lock&King")').waitFor();
-  await page.locator('.filter-panel input[aria-label="Tìm sản phẩm"]').fill('1500W');
+  await page.locator('.filter-panel input[aria-label="Tìm sản phẩm"]').fill('LK-668');
   await page.waitForTimeout(300);
   const ownCard = page.locator('.product-card').first();
   await ownCard.waitFor();
   await ownCard.locator('.select-check').check();
   console.log('Selected Lock&King product');
 
-  // Click 'So sánh ngay' in compare tray
+  // Check comparison (auto-navigated by Lock&King smart match or tray)
   console.log('5. Comparing...');
-  await page.locator('.compare-tray button.primary').click();
+  if (await page.locator('.compare-tray button.primary').isVisible()) {
+    await page.locator('.compare-tray button.primary').click();
+  }
   await page.waitForSelector('.comparison-table');
   const priceRow = page.locator('tr').filter({has: page.locator('th').filter({hasText: /^Giá NPP \/ phân phối$/})}).first();
   assert.match(await priceRow.innerText(), /460.000/);

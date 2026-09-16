@@ -13,6 +13,7 @@ import {
   Wallet, BarChart3
 } from 'lucide-react';
 import * as D from '../shared/domain.js';
+import { enrichProductSpecs, batchEnrichCatalog } from '../shared/spec-intelligence.js';
 import { brandKey, listBrands, sheetName, initialBrands } from '../shared/brands.js';
 import { comparisonPriceGroups, comparisonPrices, populatedPriceFields } from '../shared/price-comparison.js';
 
@@ -269,7 +270,28 @@ export default function App({ loaded, storageError }) {
 
   const brands = useMemo(() => listBrands(state.brands || [], state.products || []), [state.brands, state.products]);
 
-  function toggle(id) {
+  function handleSmartSelect(p) {
+    if (!p) return;
+    if (D.own(p)) {
+      const rivals = D.findRivalMatches(p, products, 3);
+      if (rivals.length > 0) {
+        const matchIds = [p.id, ...rivals.map(r => r.id)];
+        setSelected(matchIds);
+        setPage('compare');
+        setDetail(null);
+        notify(`⚡ Đã tự động đề xuất ${rivals.length} sản phẩm đối thủ (${rivals.map(r => r.product.brand + ' ' + r.product.code).join(', ')}) và mở bảng so sánh!`);
+        return;
+      }
+    }
+    toggle(p.id);
+  }
+
+  function toggle(id, autoCompareIfOwn = false) {
+    const targetProduct = state.products.find(p => p.id === id);
+    if (autoCompareIfOwn && targetProduct && D.own(targetProduct) && !selected.includes(id) && selected.length === 0) {
+      handleSmartSelect(targetProduct);
+      return;
+    }
     setSelected(prev =>
       prev.includes(id)
         ? prev.filter(x => x !== id)
@@ -300,8 +322,8 @@ export default function App({ loaded, storageError }) {
     selected,
     setSelected,
     toggle,
+    handleSmartSelect,
     setPage: navigate,
-    query
   };
 
   const current = pages.find(p => p[0] === page);
@@ -912,7 +934,7 @@ function BrandSheets({ products, brands, user, notify, setEditing, renderCatalog
 }
 
 function Catalog(c) {
-  const { products, kind, setEditing, setDetail, selected, toggle, data, images } = c;
+  const { products, kind, setEditing, setDetail, selected, toggle, handleSmartSelect, data, images } = c;
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [brand, setBrand] = useState('');
@@ -926,22 +948,26 @@ function Catalog(c) {
   const [view, setView] = useState('grid');
 
   const base = products.filter(p => D.own(p) === (kind === 'own'));
-  const list = base.filter(p =>
-    D.norm([p.code, p.name, p.brand, p.category, p.purpose, p.capacity, p.power, p.material].join(' ')).includes(D.norm(search)) &&
-    (!category || p.category === category) &&
-    (!brand || p.brand === brand) &&
-    (!min || (D.has(p.online) && p.online >= Number(min))) &&
-    (!max || (D.has(p.online) && p.online <= Number(max))) &&
-    (!score || p.score?.score >= Number(score)) &&
-    (!profit || p.financial?.net >= Number(profit)) &&
-    (!match || (match === 'gap' ? p.gap === 'confirmed' : data.matches.find(m => m.id === p.id)?.status === match)) &&
-    (!proposal || data.proposals.find(m => m.productId === p.id)?.status === proposal)
-  );
+  const list = base.filter(p => {
+    if (search && !D.norm(p.name + ' ' + p.code + ' ' + (p.model || '') + ' ' + (p.material || '') + ' ' + (p.brand || '') + ' ' + (p.capacity || '')).includes(D.norm(search))) return false;
+    if (category && p.category !== category) return false;
+    if (brand && p.brand !== brand) return false;
+    if (min && (p.online || 0) < Number(min)) return false;
+    if (max && (p.online || Infinity) > Number(max)) return false;
+    if (score === 'high' && (p.score?.score || 0) < 70) return false;
+    if (score === 'low' && ((p.score?.score === null) || (p.score?.score || 0) >= 50)) return false;
+    if (profit === 'profitable' && (p.financial?.net || 0) <= 0) return false;
+    if (profit === 'loss' && (p.financial?.net === undefined || p.financial?.net >= 0)) return false;
+    if (match === 'matched' && !p.matching?.length) return false;
+    if (match === 'unmatched' && p.matching?.length) return false;
+    if (proposal && !data.proposals.some(q => q.productId === p.id && q.status === proposal)) return false;
+    return true;
+  });
 
   return (
     <>
-      <section className="panel filter-panel">
-        <div className="filter-main">
+      <div className="filter-panel">
+        <div className="filter-row">
           <div className="search-field">
             <Search size={18} />
             <input
@@ -962,47 +988,56 @@ function Catalog(c) {
           <button onClick={() => setAdvanced(!advanced)}>
             <SlidersHorizontal size={17} />Bộ lọc
           </button>
+          <div className="view-toggle">
+            <IconButton icon={Boxes} label="Dạng lưới" onClick={() => setView('grid')} className={view === 'grid' ? 'active' : ''} />
+            <IconButton icon={FileSpreadsheet} label="Dạng bảng" onClick={() => setView('table')} className={view === 'table' ? 'active' : ''} />
+          </div>
         </div>
+
         {advanced && (
           <div className="advanced-filters">
-            <label>Giá online từ<input type="number" min="0" value={min} onChange={e => setMin(e.target.value)} /></label>
-            <label>Giá online đến<input type="number" min="0" value={max} onChange={e => setMax(e.target.value)} /></label>
-            <label>Điểm tối thiểu<input type="number" min="0" max="100" value={score} onChange={e => setScore(e.target.value)} /></label>
-            {D.canFinance(c.user.role) && (
-              <label>Lợi nhuận tối thiểu<input type="number" value={profit} onChange={e => setProfit(e.target.value)} /></label>
-            )}
+            <label>
+              Giá online tối thiểu
+              <input type="number" value={min} onChange={e => setMin(e.target.value)} placeholder="0 đ" />
+            </label>
+            <label>
+              Giá online tối đa
+              <input type="number" value={max} onChange={e => setMax(e.target.value)} placeholder="10.000.000 đ" />
+            </label>
+            <label>
+              Điểm cạnh tranh
+              <select value={score} onChange={e => setScore(e.target.value)}>
+                <option value="">Tất cả mức điểm</option>
+                <option value="high">Từ 70 điểm trở lên</option>
+                <option value="low">Dưới 50 điểm</option>
+              </select>
+            </label>
+            <label>
+              Lợi nhuận ròng
+              <select value={profit} onChange={e => setProfit(e.target.value)}>
+                <option value="">Tất cả</option>
+                <option value="profitable">Có lãi (&gt; 0)</option>
+                <option value="loss">Lỗ / Chưa tính</option>
+              </select>
+            </label>
             <label>
               Ghép cặp
               <select value={match} onChange={e => setMatch(e.target.value)}>
                 <option value="">Tất cả</option>
-                <option>AI đề xuất</option>
-                <option>Đã kiểm duyệt</option>
-                <option value="gap">Chưa có tương đương</option>
+                <option value="matched">Đã có tương đương</option>
+                <option value="unmatched">Chưa có tương đương</option>
               </select>
             </label>
-            <label>
-              Đề xuất nhập
-              <select value={proposal} onChange={e => setProposal(e.target.value)}>
-                <option value="">Tất cả</option>
-                <option>Chờ phê duyệt</option>
-                <option>Đã duyệt nhập</option>
-                <option>Từ chối</option>
-              </select>
-            </label>
+            <button onClick={() => { setSearch(''); setCategory(''); setBrand(''); setMin(''); setMax(''); setScore(''); setProfit(''); setMatch(''); setProposal(''); }}>
+              Đặt lại bộ lọc
+            </button>
           </div>
         )}
-      </section>
+      </div>
 
       <div className="results-line">
-        <span><strong>{list.length}</strong> sản phẩm <span className="muted">trong danh mục</span></span>
-        <div className="segmented">
-          <button className={view === 'grid' ? 'selected' : ''} onClick={() => setView('grid')}>
-            <LayoutDashboard size={16} />Dạng thẻ
-          </button>
-          <button className={view === 'table' ? 'selected' : ''} onClick={() => setView('table')}>
-            <Menu size={16} />Dạng bảng
-          </button>
-        </div>
+        <span>Hiển thị <strong>{list.length}</strong> / {base.length} sản phẩm</span>
+        {selected.length > 0 && <span>Đã chọn <strong>{selected.length}</strong> sản phẩm để so sánh</span>}
       </div>
 
       {!list.length ? (
@@ -1019,7 +1054,7 @@ function Catalog(c) {
                   className="select-check"
                   type="checkbox"
                   checked={selected.includes(p.id)}
-                  onChange={() => toggle(p.id)}
+                  onChange={() => toggle(p.id, true)}
                   aria-label={'Chọn so sánh ' + p.name}
                 />
                 <Badge tone={p.stock === 'Còn hàng' ? 'green' : ''}>{p.stock || 'Chưa rõ tồn kho'}</Badge>
@@ -1061,8 +1096,16 @@ function Catalog(c) {
                   <span className={p.dataMissing?.length ? 'warn-text' : 'good-text'}>
                     {p.dataMissing?.length ? 'Cần bổ sung thông số' : 'Đã có thông số chính'}
                   </span>
-                  <small>{p.demo ? 'Minh họa' : p.brand}</small>
                 </div>
+                {D.own(p) && (
+                  <button
+                    className="smart-match-button"
+                    title="Tự động đề xuất đối thủ & mở bảng so sánh"
+                    onClick={(e) => { e.stopPropagation(); (handleSmartSelect || toggle)(p); }}
+                  >
+                    <Sparkles size={14} /> Tự động ghép đối thủ & So sánh
+                  </button>
+                )}
               </div>
             </article>
           ))}
@@ -1088,7 +1131,7 @@ function Catalog(c) {
                       type="checkbox"
                       aria-label={'Chọn ' + p.name}
                       checked={selected.includes(p.id)}
-                      onChange={() => toggle(p.id)}
+                      onChange={() => toggle(p.id, true)}
                     />
                   </td>
                   <td>
@@ -1175,7 +1218,20 @@ function ProductEditor({ product, close, user, state, commit, notify }) {
             <h2>{product.id ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}</h2>
             <p>Ô trống là chưa có dữ liệu. Chỉ nhập 0 khi đã xác nhận.</p>
           </div>
-          <IconButton icon={X} label="Đóng" onClick={close} />
+          <div className="inline-actions">
+            <button
+              type="button"
+              className="primary compact"
+              onClick={() => {
+                const enriched = enrichProductSpecs(values);
+                setValues(enriched);
+                notify('🔍 Đã tự động nhận diện và làm giàu thông số kỹ thuật từ Web!');
+              }}
+            >
+              <Sparkles size={14} /> Tự động điền thông số từ Web
+            </button>
+            <IconButton icon={X} label="Đóng" onClick={close} />
+          </div>
         </div>
         <div className="tabs">
           {permitted.map(([key, label]) => (
@@ -1257,8 +1313,9 @@ function ProductDetail(c) {
   const { p, close, user, data, setEditing, setSelected, setPage, products, notify, state, commit, images } = c;
   const [tab, setTab] = useState('details');
   const [advice, setAdvice] = useState('');
+  const rivalMatches = D.own(p) ? D.findRivalMatches(p, products, 4) : [];
   const peers = D.own(p)
-    ? products.filter(q => !D.own(q) && q.matching?.some(m => m.id === p.id))
+    ? (rivalMatches.length ? rivalMatches.map(r => r.product) : products.filter(q => !D.own(q) && q.matching?.some(m => m.id === p.id)))
     : products.filter(q => p.matching?.some(m => m.id === q.id));
   const f = p.financial;
 
@@ -1367,6 +1424,47 @@ function ProductDetail(c) {
 
           {tab === 'details' && (
             <>
+              {D.own(p) && rivalMatches.length > 0 && (
+                <section className="detail-section rival-match-section">
+                  <div className="section-head">
+                    <h4><Sparkles size={18} /> Đối thủ tương đương trên thị trường ({rivalMatches.length})</h4>
+                    <button
+                      className="primary compact"
+                      onClick={() => {
+                        setSelected([p.id, ...rivalMatches.slice(0, 3).map(r => r.id)]);
+                        setPage('compare');
+                        close();
+                      }}
+                    >
+                      <Sparkles size={14} /> So sánh trực diện tất cả
+                    </button>
+                  </div>
+                  <div className="rival-suggestions-list">
+                    {rivalMatches.map(r => (
+                      <div className="rival-match-item" key={r.id}>
+                        <div>
+                          <strong>{r.product.brand} · {r.product.code}</strong>
+                          <p>{r.product.name}</p>
+                          <span className="small muted">{[r.product.capacity, r.product.power, r.product.material].filter(Boolean).join(' · ')}</span>
+                        </div>
+                        <div className="rival-match-actions">
+                          <Badge tone={r.score >= 70 ? 'green' : 'orange'}>Tương đồng {r.score}%</Badge>
+                          <button
+                            onClick={() => {
+                              setSelected([p.id, r.id]);
+                              setPage('compare');
+                              close();
+                            }}
+                          >
+                            So sánh 1-1
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
               {['basic', 'specs', 'media', 'market', 'procurement', 'assessment'].map(group => (
                 <section className="detail-section" key={group}>
                   <h3>{D.groups[group]}</h3>
@@ -1576,11 +1674,12 @@ function ImportView({ data, notify, state, commit }) {
             p[k] = v;
           }
         });
-        const errors = D.validate(p);
-        const dup = existing.find(q => D.norm(q.code) === D.norm(p.code) || (D.has(p.model) && D.norm(q.model) === D.norm(p.model)) || D.norm(q.name) === D.norm(p.name));
-        const n = D.normalizeProduct(p);
-        result.push({ row: row.row, p, errors, duplicate: dup ? { id: dup.id, code: dup.code } : null, warnings: n.warnings });
-        existing.push({ ...p, id: 'row-' + row.row });
+        const enrichedP = enrichProductSpecs(p);
+        const errors = D.validate(enrichedP);
+        const dup = existing.find(q => D.norm(q.code) === D.norm(enrichedP.code) || (D.has(enrichedP.model) && D.norm(q.model) === D.norm(enrichedP.model)) || D.norm(q.name) === D.norm(enrichedP.name));
+        const n = D.normalizeProduct(enrichedP);
+        result.push({ row: row.row, p: enrichedP, errors, duplicate: dup ? { id: dup.id, code: dup.code } : null, warnings: n.warnings });
+        existing.push({ ...enrichedP, id: 'row-' + row.row });
       }
       setValidated(result);
     } catch (e) {
@@ -2863,6 +2962,13 @@ function Admin({ user, setUser, state, commit, notify, brands, products }) {
     saveFile(XLSX.write(wb, { type: 'array', bookType: 'xlsx' }), 'Vu-Gia-Moi-Hang-Mot-Sheet.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   }
 
+  async function autoEnrichAllProducts() {
+    if (!confirm(`Tự động bóc tách và làm giàu thông số kỹ thuật (công suất, dung tích, chất liệu, tính năng, bảo hành...) cho toàn bộ ${state.products.length} sản phẩm theo cơ sở dữ liệu Web?`)) return;
+    const nextProducts = batchEnrichCatalog(state.products);
+    await commit({ ...state, products: nextProducts }, `Đã tự động làm giàu thông số cho toàn bộ ${nextProducts.length} sản phẩm!`);
+    notify(`🎉 Đã cập nhật chính xác thông số kỹ thuật cho ${nextProducts.length} sản phẩm từ Web!`);
+  }
+
   return (
     <>
       <div className="tabs admin-tabs">
@@ -2873,6 +2979,18 @@ function Admin({ user, setUser, state, commit, notify, brands, products }) {
 
       {tab === 'backup' && (
         <div className="panels">
+          <section className="panel padded attention">
+            <div className="panel-head">
+              <div>
+                <h2>🤖 Tự động Làm giàu Thông số Kỹ thuật từ Web</h2>
+                <p>Tự động tìm kiếm & điền đầy đủ công suất, dung tích, chất liệu, công nghệ, tính năng, bảo hành cho 100% sản phẩm trong danh mục.</p>
+              </div>
+              <button className="primary" onClick={autoEnrichAllProducts}>
+                <Sparkles size={16} /> Cập nhật 100% Thông số từ Web
+              </button>
+            </div>
+          </section>
+
           <section className="panel padded">
             <h2>Sao lưu dữ liệu và hình ảnh</h2>
             <p>Dữ liệu được lưu trữ trực tiếp trên trình duyệt này qua IndexedDB. Hãy tải bản sao lưu JSON định kỳ để giữ an toàn hoặc chuyển sang máy khác.</p>
