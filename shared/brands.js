@@ -1,5 +1,5 @@
 import {norm,own} from './domain.js';
-export const initialBrands=['Lock&King','Takin','Jiwon','Morico','Hare','Hatzz','Engler','Seka','WMF','Goldsun','Yoke'];
+export const initialBrands=['Lock&King','Takin','Jiwon','Morico','Hare','Hatzz','Engler','Seka','WMF','Goldsun','Yoke','Gume'];
 export const brandKey=name=>own({brand:name})?'lockking':norm(name);
 export function listBrands(saved,products){
  const map=new Map();
