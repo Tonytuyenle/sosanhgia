@@ -12,7 +12,7 @@ const defs = {
  assessment:[['demand','Phù hợp nhu cầu (0–100)','number'],['quality','Chất lượng, thông số (0–100)','number'],['difference','Tính năng khác biệt (0–100)','number'],['onlinePotential','Tiềm năng online (0–100)','number'],['gtPotential','Tiềm năng GT (0–100)','number'],['service','Hậu mãi (0–100)','number'],['assessmentSource','Nguồn và lý do đánh giá','textarea']]
 };
 defs.prices.push(['distributorPrice','Giá NPP / phân phối (báo giá)','money'],['wholesalePrice','Giá buôn (báo giá)','money'],['bulk20Price','Giá từ 20 cái','money'],['bulk50Price','Giá từ 50 cái','money'],['bulk100Price','Giá NPP / Live từ 100 cái','money'],['retailPrice','Giá bán lẻ (báo giá)','money'],['mallPrice','Giá Mall (báo giá)','money'],['packingFee','Phí đóng hàng (báo giá)','money'],['quoteDate','Ngày áp dụng báo giá','date']);
-export const catalogPriceKeys=['npp','nppOnline','distributorPrice','wholesalePrice','bulk20Price','bulk50Price','bulk100Price','minimum','listPrice','retailPrice','mallPrice','websitePrice','facebookPrice','marketplacePrice'];
+export const catalogPriceKeys=['dealer','npp','nppOnline','distributorPrice','wholesalePrice','bulk20Price','bulk50Price','bulk100Price','minimum','listPrice','retailPrice','mallPrice','websitePrice','facebookPrice','marketplacePrice'];
 export const fields = Object.entries(defs).flatMap(([group,items])=>items.map(([key,label,type='text'])=>({key,label,type,group})));
 export const labels = Object.fromEntries(fields.map(f=>[f.key,f.label]));
 export const numeric = fields.filter(f=>['money','number','percent'].includes(f.type)).map(f=>f.key);
