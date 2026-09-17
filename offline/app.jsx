@@ -307,6 +307,68 @@ export default function App({ loaded, storageError }) {
     setQuery('');
   }
 
+  async function syncSystemSeed(forceReset = false) {
+    const seed = initialSeed();
+    const seedProducts = seed.products || [];
+    const seedBrands = seed.brands || initialBrands.map(name => ({ name }));
+    const seedImages = seed.images || {};
+
+    if (forceReset) {
+      const nextState = {
+        ...state,
+        products: seedProducts,
+        brands: seedBrands,
+        images: seedImages
+      };
+      await commit(nextState, `⚡ Đã nạp lại toàn bộ ${seedProducts.length} sản phẩm và ${seedBrands.length} thương hiệu từ báo giá mới nhất!`);
+      return;
+    }
+
+    const existingProductMap = new Map();
+    state.products.forEach(p => {
+      existingProductMap.set(p.id, p);
+      if (p.brand && p.code) {
+        existingProductMap.set(D.norm(p.brand) + '::' + D.norm(p.code), p);
+      }
+    });
+
+    const mergedProducts = [...state.products];
+    let added = 0;
+    for (const sp of seedProducts) {
+      const key = D.norm(sp.brand) + '::' + D.norm(sp.code);
+      const existing = existingProductMap.get(sp.id) || existingProductMap.get(key);
+      if (!existing) {
+        mergedProducts.push(sp);
+        existingProductMap.set(sp.id, sp);
+        existingProductMap.set(key, sp);
+        added++;
+      } else {
+        const idx = mergedProducts.findIndex(p => p.id === existing.id);
+        if (idx >= 0) {
+          mergedProducts[idx] = { ...existing, ...sp };
+        }
+      }
+    }
+
+    const existingBrandNames = new Set((state.brands || []).map(b => D.norm(typeof b === 'string' ? b : b.name)));
+    const mergedBrands = [...(state.brands || [])];
+    for (const sb of seedBrands) {
+      const name = typeof sb === 'string' ? sb : sb.name;
+      if (name && !existingBrandNames.has(D.norm(name))) {
+        mergedBrands.push(typeof sb === 'string' ? { name: sb } : sb);
+        existingBrandNames.add(D.norm(name));
+      }
+    }
+
+    const nextState = {
+      ...state,
+      products: mergedProducts,
+      brands: mergedBrands,
+      images: { ...seedImages, ...(state.images || {}) }
+    };
+    await commit(nextState, `⚡ Đã đồng bộ thành công: Tổng cộng ${mergedProducts.length} sản phẩm (${added} mã mới)!`);
+  }
+
   const ctx = {
     user,
     setUser,
@@ -317,6 +379,7 @@ export default function App({ loaded, storageError }) {
     state,
     notify,
     commit,
+    syncSystemSeed,
     setDetail,
     setEditing,
     selected,
@@ -394,7 +457,7 @@ export default function App({ loaded, storageError }) {
                 else document.documentElement.requestFullscreen().catch(() => notify('Trình duyệt không hỗ trợ toàn màn hình'));
               }}
             />
-            <IconButton icon={RefreshCw} label="Làm mới hiển thị" onClick={() => notify('Dữ liệu đã được cập nhật.')} />
+            <IconButton icon={RefreshCw} label="Đồng bộ dữ liệu mới nhất" onClick={() => syncSystemSeed(false)} />
             <div className="avatar small-avatar">{user.name[0]}</div>
           </div>
         </header>
@@ -3422,10 +3485,27 @@ function Admin({ user, setUser, state, commit, notify, brands, products }) {
           <section className="panel padded attention">
             <div className="panel-head">
               <div>
+                <h2>🔄 Đồng bộ / Cập nhật Báo giá Mới nhất từ Hệ thống</h2>
+                <p>Nạp toàn bộ báo giá mới nhất gồm Gume Korea (69 SP), Seka (67 SP), Hare, Morico... vào cơ sở dữ liệu trên máy bạn.</p>
+              </div>
+              <div className="inline-actions">
+                <button className="primary" onClick={() => syncSystemSeed(false)}>
+                  <RefreshCw size={16} /> Đồng bộ thêm sản phẩm mới
+                </button>
+                <button className="button danger" onClick={() => { if (confirm('Khôi phục lại toàn bộ dữ liệu gốc từ báo giá chuẩn? Mọi dữ liệu chỉnh sửa thủ công sẽ được làm mới theo báo giá chuẩn 499 sản phẩm.')) syncSystemSeed(true); }}>
+                  Làm mới toàn bộ danh mục chuẩn
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section className="panel padded">
+            <div className="panel-head">
+              <div>
                 <h2>🤖 Tự động Làm giàu Thông số Kỹ thuật từ Web</h2>
                 <p>Tự động tìm kiếm & điền đầy đủ công suất, dung tích, chất liệu, công nghệ, tính năng, bảo hành cho 100% sản phẩm trong danh mục.</p>
               </div>
-              <button className="primary" onClick={autoEnrichAllProducts}>
+              <button className="button" onClick={autoEnrichAllProducts}>
                 <Sparkles size={16} /> Cập nhật 100% Thông số từ Web
               </button>
             </div>
@@ -3504,12 +3584,16 @@ async function boot() {
   let state, storageError;
   try {
     state = await readStorage();
+    const seed = initialSeed();
+    const seedProducts = seed.products || [];
+    const seedBrands = seed.brands || initialBrands.map(name => ({ name }));
+    const seedImages = seed.images || {};
+
     if (!state || !state.products?.length) {
-      const seed = initialSeed();
       state = {
-        products: seed.products || [],
-        brands: seed.brands || initialBrands.map(name => ({ name })),
-        images: seed.images || {},
+        products: seedProducts,
+        brands: seedBrands,
+        images: seedImages,
         matches: seed.matches || [],
         weights: seed.weights || D.defaultWeights,
         opportunities: seed.opportunities || [],
@@ -3518,6 +3602,59 @@ async function boot() {
         imports: seed.imports || []
       };
       await writeStorage(state);
+    } else if (seedProducts.length > 0) {
+      // Auto merge new seed products and brands into local state
+      let changed = false;
+      const existingProductMap = new Map();
+      state.products.forEach(p => {
+        existingProductMap.set(p.id, p);
+        if (p.brand && p.code) {
+          existingProductMap.set(D.norm(p.brand) + '::' + D.norm(p.code), p);
+        }
+      });
+
+      const mergedProducts = [...state.products];
+      for (const sp of seedProducts) {
+        const key = D.norm(sp.brand) + '::' + D.norm(sp.code);
+        const existing = existingProductMap.get(sp.id) || existingProductMap.get(key);
+        if (!existing) {
+          mergedProducts.push(sp);
+          existingProductMap.set(sp.id, sp);
+          existingProductMap.set(key, sp);
+          changed = true;
+        } else {
+          // If seed product has official price update or new spec information, synchronize it
+          const idx = mergedProducts.findIndex(p => p.id === existing.id);
+          if (idx >= 0 && (sp.updatedBy?.includes('Bảng giá') || sp.source?.includes('BẢNG GIÁ'))) {
+            mergedProducts[idx] = { ...existing, ...sp };
+            changed = true;
+          }
+        }
+      }
+
+      // Merge brands
+      const existingBrandNames = new Set((state.brands || []).map(b => D.norm(typeof b === 'string' ? b : b.name)));
+      const mergedBrands = [...(state.brands || [])];
+      for (const sb of seedBrands) {
+        const name = typeof sb === 'string' ? sb : sb.name;
+        if (name && !existingBrandNames.has(D.norm(name))) {
+          mergedBrands.push(typeof sb === 'string' ? { name: sb } : sb);
+          existingBrandNames.add(D.norm(name));
+          changed = true;
+        }
+      }
+
+      const mergedImages = { ...seedImages, ...(state.images || {}) };
+
+      if (changed || mergedProducts.length !== state.products.length) {
+        state = {
+          ...state,
+          products: mergedProducts,
+          brands: mergedBrands,
+          images: mergedImages
+        };
+        await writeStorage(state);
+      }
     }
   } catch (e) {
     const seed = initialSeed();
