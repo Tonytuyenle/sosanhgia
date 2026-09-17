@@ -8,7 +8,7 @@ Nhấp đúp **index.html** bằng Chrome hoặc Edge để mở bản cá nhân
 - Vào **Sao lưu & nhập dữ liệu** để nhập Excel, xuất mỗi hãng một sheet hoặc sao lưu/khôi phục JSON.
 - Dữ liệu chỉnh sửa được lưu trong trình duyệt đang dùng. Tải bản sao lưu JSON để chuyển cả giá và ảnh sang máy khác; không xóa dữ liệu duyệt web trước khi sao lưu.
 - Bản này không có tài khoản, phân quyền nhiều người hay tự đồng bộ với cơ sở dữ liệu của bản server.
-- Bản tải từ GitHub không có dữ liệu kinh doanh riêng; nhập Excel hoặc khôi phục JSON để nạp danh mục.
+- Bản tải từ GitHub hiện chứa danh mục và thư mục ảnh. Giải nén cả dự án để ảnh hiển thị đầy đủ. Dữ liệu chỉnh sửa trong trình duyệt không tự đồng bộ lên GitHub.
 
 ## Bản server có đăng nhập và phân quyền
 

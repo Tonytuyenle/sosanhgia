@@ -9,7 +9,7 @@
     "dev": "node server/index.js",
     "build": "tsc --noEmit && vite build",
     "start": "node server/index.js",
-    "test": "node --test tests/domain.test.js tests/brands.test.js tests/api.test.js tests/price-comparison.test.js"
+    "test": "node --test tests/domain.test.js tests/brands.test.js tests/api.test.js tests/price-comparison.test.js tests/offline-backup.test.js tests/offline-seed.test.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

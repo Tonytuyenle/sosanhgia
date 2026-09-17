@@ -16,6 +16,8 @@ import * as D from '../shared/domain.js';
 import { enrichProductSpecs, batchEnrichCatalog } from '../shared/spec-intelligence.js';
 import { brandKey, listBrands, sheetName, initialBrands } from '../shared/brands.js';
 import { comparisonPriceGroups, comparisonPrices, populatedPriceFields } from '../shared/price-comparison.js';
+import { createOfflineState, hydrateOfflineState, applyManualSeed } from '../shared/offline-seed.js';
+import { prepareBackup } from './backup.js';
 
 import '../src/styles.css';
 import '../src/readability.css';
@@ -309,64 +311,13 @@ export default function App({ loaded, storageError }) {
 
   async function syncSystemSeed(forceReset = false) {
     const seed = initialSeed();
-    const seedProducts = seed.products || [];
-    const seedBrands = seed.brands || initialBrands.map(name => ({ name }));
-    const seedImages = seed.images || {};
-
-    if (forceReset) {
-      const nextState = {
-        ...state,
-        products: seedProducts,
-        brands: seedBrands,
-        images: seedImages
-      };
-      await commit(nextState, `⚡ Đã nạp lại toàn bộ ${seedProducts.length} sản phẩm và ${seedBrands.length} thương hiệu từ báo giá mới nhất!`);
-      return;
-    }
-
-    const existingProductMap = new Map();
-    state.products.forEach(p => {
-      existingProductMap.set(p.id, p);
-      if (p.brand && p.code) {
-        existingProductMap.set(D.norm(p.brand) + '::' + D.norm(p.code), p);
-      }
-    });
-
-    const mergedProducts = [...state.products];
-    let added = 0;
-    for (const sp of seedProducts) {
-      const key = D.norm(sp.brand) + '::' + D.norm(sp.code);
-      const existing = existingProductMap.get(sp.id) || existingProductMap.get(key);
-      if (!existing) {
-        mergedProducts.push(sp);
-        existingProductMap.set(sp.id, sp);
-        existingProductMap.set(key, sp);
-        added++;
-      } else {
-        const idx = mergedProducts.findIndex(p => p.id === existing.id);
-        if (idx >= 0) {
-          mergedProducts[idx] = { ...existing, ...sp };
-        }
-      }
-    }
-
-    const existingBrandNames = new Set((state.brands || []).map(b => D.norm(typeof b === 'string' ? b : b.name)));
-    const mergedBrands = [...(state.brands || [])];
-    for (const sb of seedBrands) {
-      const name = typeof sb === 'string' ? sb : sb.name;
-      if (name && !existingBrandNames.has(D.norm(name))) {
-        mergedBrands.push(typeof sb === 'string' ? { name: sb } : sb);
-        existingBrandNames.add(D.norm(name));
-      }
-    }
-
-    const nextState = {
-      ...state,
-      products: mergedProducts,
-      brands: mergedBrands,
-      images: { ...seedImages, ...(state.images || {}) }
-    };
-    await commit(nextState, `⚡ Đã đồng bộ thành công: Tổng cộng ${mergedProducts.length} sản phẩm (${added} mã mới)!`);
+    const count = (seed.products || []).length;
+    const message = forceReset
+      ? `Thay toàn bộ danh mục hiện tại bằng ${count} sản phẩm từ báo giá chuẩn? Các sản phẩm thêm riêng và chỉnh sửa thủ công trong danh mục sẽ bị thay thế. Hãy sao lưu trước nếu cần giữ lại.`
+      : `Cập nhật từ ${count} sản phẩm trong báo giá chuẩn? Giá, ảnh và thông số của các mã trùng sẽ được thay thế; các mã chuẩn đã xóa sẽ được thêm lại. Hãy sao lưu trước nếu cần giữ các chỉnh sửa hiện tại.`;
+    if (!confirm(message)) return;
+    const nextState = applyManualSeed(state, seed, forceReset);
+    await commit(nextState, `Đã cập nhật danh mục: ${nextState.products.length} sản phẩm.`);
   }
 
   const ctx = {
@@ -3405,26 +3356,17 @@ function Reports({ products, user, data }) {
   );
 }
 
-function Admin({ user, setUser, state, commit, notify, brands, products }) {
+function Admin({ user, setUser, state, commit, notify, brands, products, syncSystemSeed }) {
   const [tab, setTab] = useState('backup');
 
-  function backup() {
-    const payload = {
-      format: 'vugia-offline',
-      version: 1,
-      at: new Date().toISOString(),
-      products: state.products,
-      brands: state.brands,
-      images: state.images,
-      matches: state.matches,
-      weights: state.weights,
-      opportunities: state.opportunities,
-      proposals: state.proposals,
-      follows: state.follows,
-      imports: state.imports
-    };
-    saveFile(JSON.stringify(payload, null, 2), 'Vu-Gia-sao-luu-' + new Date().toISOString().slice(0, 10) + '.json', 'application/json');
-    notify('Đã tạo tệp sao lưu gồm toàn bộ sản phẩm, giá và ảnh.');
+  async function backup() {
+    try {
+      const payload = await prepareBackup(state);
+      saveFile(JSON.stringify(payload, null, 2), 'Vu-Gia-sao-luu-' + new Date().toISOString().slice(0, 10) + '.json', 'application/json');
+      notify('Đã tạo tệp sao lưu gồm toàn bộ sản phẩm, giá và ảnh.');
+    } catch (e) {
+      notify(e.name === 'AbortError' ? 'Đã hủy sao lưu.' : 'Chưa tạo được bản sao lưu: ' + e.message);
+    }
   }
 
   async function restore(file) {
@@ -3444,7 +3386,8 @@ function Admin({ user, setUser, state, commit, notify, brands, products }) {
         opportunities: b.opportunities || [],
         proposals: b.proposals || [],
         follows: b.follows || [],
-        imports: b.imports || []
+        imports: b.imports || [],
+        seedSync: b.seedSync
       }, 'Khôi phục dữ liệu thành công.');
     } catch (e) {
       notify('Lỗi khôi phục: ' + e.message);
@@ -3490,9 +3433,9 @@ function Admin({ user, setUser, state, commit, notify, brands, products }) {
               </div>
               <div className="inline-actions">
                 <button className="primary" onClick={() => syncSystemSeed(false)}>
-                  <RefreshCw size={16} /> Đồng bộ thêm sản phẩm mới
+                  <RefreshCw size={16} /> Cập nhật từ báo giá chuẩn
                 </button>
-                <button className="button danger" onClick={() => { if (confirm('Khôi phục lại toàn bộ dữ liệu gốc từ báo giá chuẩn? Mọi dữ liệu chỉnh sửa thủ công sẽ được làm mới theo báo giá chuẩn 499 sản phẩm.')) syncSystemSeed(true); }}>
+                <button className="button danger" onClick={() => syncSystemSeed(true)}>
                   Làm mới toàn bộ danh mục chuẩn
                 </button>
               </div>
@@ -3514,6 +3457,7 @@ function Admin({ user, setUser, state, commit, notify, brands, products }) {
           <section className="panel padded">
             <h2>Sao lưu dữ liệu và hình ảnh</h2>
             <p>Dữ liệu được lưu trữ trực tiếp trên trình duyệt này qua IndexedDB. Hãy tải bản sao lưu JSON định kỳ để giữ an toàn hoặc chuyển sang máy khác.</p>
+            <p className="muted small">Để kèm ảnh, Chrome/Edge có thể yêu cầu bạn chọn thư mục dự án chứa data/assets. Bản HTML đã nhúng sẵn ảnh không cần chọn thư mục.</p>
             <div className="inline-actions" style={{ marginTop: 15 }}>
               <button className="primary" onClick={backup}><Download size={16} />Tải bản sao lưu JSON</button>
               <label className="button">
@@ -3584,91 +3528,11 @@ async function boot() {
   let state, storageError;
   try {
     state = await readStorage();
-    const seed = initialSeed();
-    const seedProducts = seed.products || [];
-    const seedBrands = seed.brands || initialBrands.map(name => ({ name }));
-    const seedImages = seed.images || {};
-
-    if (!state || !state.products?.length) {
-      state = {
-        products: seedProducts,
-        brands: seedBrands,
-        images: seedImages,
-        matches: seed.matches || [],
-        weights: seed.weights || D.defaultWeights,
-        opportunities: seed.opportunities || [],
-        proposals: seed.proposals || [],
-        follows: seed.follows || [],
-        imports: seed.imports || []
-      };
-      await writeStorage(state);
-    } else if (seedProducts.length > 0) {
-      // Auto merge new seed products and brands into local state
-      let changed = false;
-      const existingProductMap = new Map();
-      state.products.forEach(p => {
-        existingProductMap.set(p.id, p);
-        if (p.brand && p.code) {
-          existingProductMap.set(D.norm(p.brand) + '::' + D.norm(p.code), p);
-        }
-      });
-
-      const mergedProducts = [...state.products];
-      for (const sp of seedProducts) {
-        const key = D.norm(sp.brand) + '::' + D.norm(sp.code);
-        const existing = existingProductMap.get(sp.id) || existingProductMap.get(key);
-        if (!existing) {
-          mergedProducts.push(sp);
-          existingProductMap.set(sp.id, sp);
-          existingProductMap.set(key, sp);
-          changed = true;
-        } else {
-          // If seed product has official price update or new spec information, synchronize it
-          const idx = mergedProducts.findIndex(p => p.id === existing.id);
-          if (idx >= 0 && (sp.updatedBy?.includes('Bảng giá') || sp.source?.includes('BẢNG GIÁ'))) {
-            mergedProducts[idx] = { ...existing, ...sp };
-            changed = true;
-          }
-        }
-      }
-
-      // Merge brands
-      const existingBrandNames = new Set((state.brands || []).map(b => D.norm(typeof b === 'string' ? b : b.name)));
-      const mergedBrands = [...(state.brands || [])];
-      for (const sb of seedBrands) {
-        const name = typeof sb === 'string' ? sb : sb.name;
-        if (name && !existingBrandNames.has(D.norm(name))) {
-          mergedBrands.push(typeof sb === 'string' ? { name: sb } : sb);
-          existingBrandNames.add(D.norm(name));
-          changed = true;
-        }
-      }
-
-      const mergedImages = { ...seedImages, ...(state.images || {}) };
-
-      if (changed || mergedProducts.length !== state.products.length) {
-        state = {
-          ...state,
-          products: mergedProducts,
-          brands: mergedBrands,
-          images: mergedImages
-        };
-        await writeStorage(state);
-      }
-    }
+    const hydrated = hydrateOfflineState(state, initialSeed());
+    state = hydrated.state;
+    if (hydrated.changed) await writeStorage(state);
   } catch (e) {
-    const seed = initialSeed();
-    state = {
-      products: seed.products || [],
-      brands: seed.brands || initialBrands.map(name => ({ name })),
-      images: seed.images || {},
-      matches: [],
-      weights: D.defaultWeights,
-      opportunities: [],
-      proposals: [],
-      follows: [],
-      imports: []
-    };
+    state = state || createOfflineState(initialSeed());
     storageError = 'Trình duyệt chưa bật lưu IndexedDB: ' + e.message;
   }
 
