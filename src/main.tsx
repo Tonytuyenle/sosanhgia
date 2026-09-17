@@ -8,6 +8,19 @@ import './styles.css';
 import './readability.css';
 import {comparisonPriceGroups,comparisonPrices,populatedPriceFields} from '../shared/price-comparison.js';
 import BrandSheets from './BrandSheets';
+import * as XLSX from 'xlsx';
+import { sheetName } from '../shared/brands.js';
+
+function saveFile(data, name, type) {
+  const url = URL.createObjectURL(new Blob([data], { type }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
 
 async function api(url,body?,method='POST'){const res=await fetch('/api'+url,{method:body===undefined?'GET':method,headers:body instanceof FormData?{}:{'Content-Type':'application/json'},...(body!==undefined?{body:body instanceof FormData?body:JSON.stringify(body)}:{})});let data;try{data=await res.json();}catch{throw new Error('Không thể đọc phản hồi từ máy chủ');}if(!res.ok)throw new Error(data.error||'Không thể thực hiện');return data;}
 const money=v=>D.has(v)?new Intl.NumberFormat('vi-VN',{style:'currency',currency:'VND',maximumFractionDigits:0}).format(v):'Chưa có dữ liệu';
@@ -64,7 +77,7 @@ function generateAiSalesPitch(p, peers = [], user) {
   return pitch;
 }
 
-const pages=[['dashboard','Tổng quan',LayoutDashboard],['brands','Danh mục theo hãng',Building2],['own','Sản phẩm Lock&King',Package],['rivals','Sản phẩm đối thủ',Boxes],['import','Nhập dữ liệu Excel',Upload],['matching','Ghép cặp sản phẩm',GitCompareArrows],['compare','So sánh sản phẩm',ArrowLeftRight],['finance','Giá & lợi nhuận',ChartNoAxesCombined],['scoring','Điểm cạnh tranh',Target],['opportunities','Cơ hội sản phẩm mới',Sparkles],['proposals','Đề xuất nhập hàng',ShoppingBag],['reports','Báo cáo & xuất dữ liệu',FileDown],['admin','Quản trị hệ thống',Settings]];
+const pages=[['dashboard','Tổng quan',LayoutDashboard],['brands','Danh mục theo hãng',Building2],['own','Sản phẩm Lock&King',Package],['rivals','Sản phẩm đối thủ',Boxes],['import','Nhập dữ liệu Excel',Upload],['matching','Ghép cặp sản phẩm',GitCompareArrows],['compare','So sánh sản phẩm',ArrowLeftRight],['missing','Sản phẩm Lock&King chưa có',Sparkles],['finance','Giá & lợi nhuận',ChartNoAxesCombined],['scoring','Điểm cạnh tranh',Target],['proposals','Đề xuất nhập hàng',ShoppingBag],['reports','Báo cáo & xuất dữ liệu',FileDown],['admin','Quản trị hệ thống',Settings]];
 
 function Login({setup,onLogin}){const [error,setError]=useState(''),[busy,setBusy]=useState(false);async function submit(e){e.preventDefault();setBusy(true);try{onLogin(await api(setup?'/setup':'/login',Object.fromEntries(new FormData(e.target))));}catch(e){setError(e.message)}finally{setBusy(false)}}return <div className="login"><div className="login-brand"><div className="logo-mark">V</div><h1>VŨ GIA</h1><span>PRODUCT INTELLIGENCE · V2</span><h2>Dữ liệu rõ ràng.<br/>Quyết định vững vàng.</h2><p>So sánh sản phẩm, quản trị giá và đánh giá cơ hội kinh doanh trên cùng một hệ thống.</p><div className="login-features"><span><CheckCircle2/> Danh mục tập trung</span><span><CheckCircle2/> So sánh có kiểm chứng</span><span><CheckCircle2/> Phân quyền theo bộ phận</span></div></div><form onSubmit={submit} className="login-form"><Badge tone="blue">VŨ GIA · PHIÊN BẢN 2</Badge><h2>{setup?'Thiết lập hệ thống':'Chào mừng trở lại'}</h2><p>{setup?'Tạo tài khoản quản trị đầu tiên để bắt đầu.':'Đăng nhập để truy cập không gian làm việc.'}</p>{setup&&<label>Họ và tên<input name="name" required autoComplete="name" placeholder="Nhập họ và tên"/></label>}<label>Email<input name="email" type="email" required autoComplete="username" placeholder="ten@congty.vn"/></label><label>Mật khẩu<input name="password" type="password" minLength={setup?10:1} required autoComplete={setup?'new-password':'current-password'} placeholder={setup?'Tối thiểu 10 ký tự':'Nhập mật khẩu'}/></label>{error&&<div className="notice error">{error}</div>}<button className="primary wide" disabled={busy}>{busy?'Đang xử lý…':setup?'Tạo hệ thống':'Đăng nhập'}<ArrowUpRight size={18}/></button><p className="small"><LockKeyhole size={14}/> Phiên làm việc bảo mật · Tự hết hạn sau 8 giờ</p></form></div>}
 
@@ -98,7 +111,7 @@ function App(){
  {page==='compare'&&<Comparison {...ctx}/>}
  {page==='finance'&&<FinanceView {...ctx}/>}
  {page==='scoring'&&<Scoring {...ctx}/>}
- {page==='opportunities'&&<Opportunities {...ctx}/>}
+ {['missing','opportunities','gap'].includes(page)&&<MissingProductsView {...ctx}/>}
  {page==='proposals'&&<Proposals {...ctx}/>}
  {page==='reports'&&<Reports {...ctx}/>}
  {page==='admin'&&<Admin {...ctx}/>}
@@ -119,11 +132,11 @@ function App(){
 }
 
 function Stat({label,value,icon:Icon,tone='blue',note}){return <div className="stat"><div className="stat-top"><span>{label}</span><div className={'stat-icon '+tone}><Icon size={20}/></div></div><strong>{value}</strong><small>{note}</small></div>}
-function Dashboard(c){const {products,data,user,setPage,setDetail,action}=c,own=products.filter(D.own),rivals=products.filter(p=>!D.own(p)),pending=data.matches.filter(m=>m.status==='AI đề xuất'&&m.ids.length),gaps=rivals.filter(p=>p.gap==='confirmed'),profits=own.filter(p=>D.has(p.financial?.net)).sort((a,b)=>b.financial.net-a.financial.net).slice(0,10),top=own.filter(p=>!p.recommendation?.pending&&p.recommendation).sort((a,b)=>(b.score?.score||0)-(a.score?.score||0)).slice(0,10);const bars=own.filter(p=>p.online>0).slice(0,6);const brands=Object.entries(rivals.reduce((a,p)=>(a[p.brand]=(a[p.brand]||0)+1,a),{})).sort((a,b)=>b[1]-a[1]);
- return <><div className="stats"><Stat label="Sản phẩm Lock&King" value={own.length} icon={Package} note="Danh mục của Vũ Gia"/><Stat label="Sản phẩm đối thủ" value={rivals.length} icon={Boxes} tone="violet" note={`${brands.length} thương hiệu đang theo dõi`}/><Stat label="Ghép cặp chờ duyệt" value={pending.length} icon={GitCompareArrows} tone="orange" note={`${data.matches.filter(m=>m.ids.length).length} sản phẩm đã có ghép cặp`}/><Stat label="Cơ hội sản phẩm mới" value={gaps.length} icon={Sparkles} tone="green" note={`${rivals.filter(p=>p.gap==='incomplete').length} trường hợp cần bổ sung dữ liệu`}/></div>
+function Dashboard(c){const {products,data,user,setPage,setDetail,action}=c,own=products.filter(D.own),rivals=products.filter(p=>!D.own(p)),pending=data.matches.filter(m=>m.status==='AI đề xuất'&&m.ids?.length),gaps=rivals.filter(p=>p.gap==='confirmed'),profits=own.filter(p=>D.has(p.financial?.net)).sort((a,b)=>b.financial.net-a.financial.net).slice(0,10),top=own.filter(p=>!p.recommendation?.pending&&p.recommendation).sort((a,b)=>(b.score?.score||0)-(a.score?.score||0)).slice(0,10);const bars=own.filter(p=>p.online>0).slice(0,6);const brands=Object.entries(rivals.reduce((a,p)=>(a[p.brand]=(a[p.brand]||0)+1,a),{})).sort((a,b)=>b[1]-a[1]);const missingProducts=D.getMissingProducts(products);
+ return <><div className="stats"><Stat label="Sản phẩm Lock&King" value={own.length} icon={Package} note="Danh mục của Vũ Gia"/><Stat label="Sản phẩm đối thủ" value={rivals.length} icon={Boxes} tone="violet" note={`${brands.length} thương hiệu đang theo dõi`}/><Stat label="Ghép cặp chờ duyệt" value={pending.length} icon={GitCompareArrows} tone="orange" note={`${data.matches.filter(m=>m.ids?.length).length} sản phẩm đã có ghép cặp`}/><Stat label="Sản phẩm L&K chưa có" value={missingProducts.length} icon={Sparkles} tone="green" note={`Từ ${brands.length} thương hiệu đối thủ`}/></div>
  {!products.length?<Empty title="Sẵn sàng xây dựng danh mục của bạn" text="Nhập Excel hoặc thêm sản phẩm đầu tiên. Có thể nạp dữ liệu minh họa để thử các chức năng."><div className="inline-actions"><button className="primary" onClick={()=>setPage('import')}>Nhập Excel</button>{user.role==='admin'&&<button onClick={()=>{if(confirm('Nạp 11 sản phẩm minh họa vào danh mục trống?'))action('/demo',{})}}>Nạp dữ liệu minh họa</button>}</div></Empty>:<>
  <div className="dashboard-grid"><section className="panel price-panel"><div className="panel-head"><div><h2>Vị thế giá trên thị trường</h2><p>Giá online của Lock&King và sản phẩm tương đương</p></div><button className="text-button" onClick={()=>setPage('compare')}>Chi tiết <ArrowUpRight size={16}/></button></div><div className="legend"><span><i className="blue-dot"/>Lock&King</span><span><i className="light-dot"/>Trung bình đối thủ tương đương</span></div><div className="bar-chart">{bars.map(p=>{const peers=rivals.filter(q=>D.similarity(p,q).score>=50&&q.online>0),avg=peers.length?peers.reduce((s,q)=>s+q.online,0)/peers.length:null;const max=Math.max(...bars.map(q=>q.online),...rivals.map(q=>q.online||0),1);return <div className="bar-row" key={p.id}><button className="bar-label" onClick={()=>setDetail(p.id)}>{p.category}<small>{p.code}</small></button><div className="bar-tracks"><div><span style={{width:Math.max(2,p.online/max*100)+'%'}}/><b>{money(p.online)}</b></div>{avg&&<div><span className="rival-bar" style={{width:Math.max(2,avg/max*100)+'%'}}/><b>{money(avg)}</b></div>}</div></div>})}</div></section>
- <section className="panel attention"><div className="panel-head"><h2>Cần bạn xử lý</h2><Badge tone="orange">Ưu tiên</Badge></div><button onClick={()=>setPage('matching')}><div className="attention-icon orange"><GitCompareArrows/></div><span><strong>{pending.length} kết quả ghép cặp</strong><small>Kiểm tra và xác nhận tương đương</small></span><ChevronRight size={18}/></button><button onClick={()=>setPage('opportunities')}><div className="attention-icon green"><Sparkles/></div><span><strong>{gaps.length} cơ hội mới</strong><small>Lock&King chưa có tương đương</small></span><ChevronRight size={18}/></button><button onClick={()=>setPage('scoring')}><div className="attention-icon violet"><Target/></div><span><strong>{own.filter(p=>p.score?.score===null).length} sản phẩm thiếu dữ liệu</strong><small>Bổ sung trước khi chấm điểm</small></span><ChevronRight size={18}/></button><div className="advantage-summary"><div><strong className="good-text">{own.filter(p=>p.score?.score>=70).length}</strong><span>Có khả năng cạnh tranh</span></div><div><strong className="bad-text">{own.filter(p=>p.score?.score!=null&&p.score.score<50).length}</strong><span>Đang bất lợi</span></div></div></section></div>
+ <section className="panel attention"><div className="panel-head"><h2>Cần bạn xử lý</h2><Badge tone="orange">Ưu tiên</Badge></div><button onClick={()=>setPage('matching')}><div className="attention-icon orange"><GitCompareArrows/></div><span><strong>{pending.length} kết quả ghép cặp</strong><small>Kiểm tra và xác nhận tương đương</small></span><ChevronRight size={18}/></button><button onClick={()=>setPage('missing')}><div className="attention-icon green"><Sparkles/></div><span><strong>{missingProducts.length} sản phẩm L&K chưa có</strong><small>Xem danh mục các hãng đối thủ</small></span><ChevronRight size={18}/></button><button onClick={()=>setPage('scoring')}><div className="attention-icon violet"><Target/></div><span><strong>{own.filter(p=>p.score?.score===null).length} sản phẩm thiếu dữ liệu</strong><small>Bổ sung trước khi chấm điểm</small></span><ChevronRight size={18}/></button><div className="advantage-summary"><div><strong className="good-text">{own.filter(p=>p.score?.score>=70).length}</strong><span>Có khả năng cạnh tranh</span></div><div><strong className="bad-text">{own.filter(p=>p.score?.score!=null&&p.score.score<50).length}</strong><span>Đang bất lợi</span></div></div></section></div>
  <div className="dashboard-grid lower"><section className="panel"><div className="panel-head"><div><h2>Sản phẩm cần ưu tiên đánh giá</h2><p>Xếp theo điểm cạnh tranh, tối đa 10 sản phẩm</p></div><button className="text-button" onClick={()=>setPage('proposals')}>Xem đề xuất <ChevronRight size={16}/></button></div>{top.length?<div className="table-wrap"><table><thead><tr><th>Sản phẩm</th><th>Điểm</th><th>Lợi nhuận / sp</th><th>Đề xuất</th></tr></thead><tbody>{top.map(p=><tr key={p.id}><td><button className="table-product" onClick={()=>setDetail(p.id)}><strong>{p.name}</strong><small>{p.code} · {p.category}</small></button></td><td><Score score={p.score}/></td><td className="good-text">{money(p.financial?.net)}</td><td><Badge tone="blue">{p.recommendation.label}</Badge></td></tr>)}</tbody></table></div>:<Empty title="Chưa có đề xuất đủ cơ sở" text="Cần dữ liệu giá nhập, chi phí và đánh giá có nguồn để xếp hạng."/>}</section><section className="panel"><div className="panel-head"><h2>Thương hiệu đang theo dõi</h2><Boxes size={20}/></div><div className="brand-list">{brands.slice(0,5).map(([brand,count],i)=><div key={brand}><div className="brand-initial">{brand.slice(-1)}</div><span><strong>{brand}</strong><small>{rivals.filter(p=>p.brand===brand&&p.matching?.length).length} sản phẩm cạnh tranh trực tiếp</small></span><b>{count}</b></div>)}</div><div className="panel-bottom">Số lượng sản phẩm có trong danh mục hiện tại</div></section></div>
  {D.canFinance(user.role)&&<div className="dashboard-grid"><section className="panel"><div className="panel-head"><h2>Top lợi nhuận dự kiến</h2><Wallet size={20}/></div><div className="profit-bars">{profits.map(p=><div key={p.id}><button onClick={()=>setDetail(p.id)}>{p.code}</button><div><span style={{width:Math.max(2,Math.abs(p.financial.net)/Math.max(...profits.map(q=>Math.abs(q.financial.net)),1)*100)+'%',background:p.financial.net<0?'#dc4c57':undefined}}/></div><strong>{money(p.financial.net)}</strong></div>)}{!profits.length&&<p className="muted">Chưa đủ dữ liệu lợi nhuận.</p>}</div></section><section className="panel"><div className="panel-head"><h2>Top cần điều chỉnh giá</h2><TrendingUp size={20}/></div><div className="brand-list">{own.filter(p=>p.recommendation?.label==='Nên đàm phán lại giá').slice(0,10).map(p=><button className="list-link" key={p.id} onClick={()=>setDetail(p.id)}>{p.name}<Badge tone="orange">Đàm phán giá</Badge></button>)}{!own.some(p=>p.recommendation?.label==='Nên đàm phán lại giá')&&<p className="muted">Chưa ghi nhận đề xuất điều chỉnh giá có đủ cơ sở.</p>}</div></section></div>}
  <div className="dashboard-grid"><Matrix products={own} title="Ma trận giá & tính năng" x="online" y="difference" xLabel="Giá online →" yLabel="Tính năng khác biệt (0–100)" setDetail={setDetail}/><Matrix products={own} title="Ma trận tiềm năng & rủi ro" x="inventoryRisk" y="demand" xLabel="Rủi ro tồn kho (0–100) →" yLabel="Tiềm năng nhu cầu (0–100)" setDetail={setDetail}/></div>
@@ -155,7 +168,552 @@ function FinanceView({products,user,action}){const[id,setId]=useState(products.f
 
 function Scoring({products,data,user,action,setDetail}){const[weights,setWeights]=useState({...data.weights});useEffect(()=>setWeights({...data.weights}),[data.weights]);const total=Object.values(weights).reduce((s,n)=>s+Number(n),0);return <><section className="panel"><div className="panel-head"><div><h2>Trọng số cạnh tranh</h2><p>Điểm tổng = Σ (điểm tiêu chí / 100 × trọng số). Đánh giá định tính cần có nguồn và người cập nhật.</p></div><Badge tone={total===100?'green':'red'}>Tổng {total}/100</Badge></div><div className="weight-grid">{Object.entries(D.scoreLabels).map(([k,label])=><label key={k}>{label}<div><input type="number" min="0" max="100" value={weights[k]} disabled={!['admin','leader'].includes(user.role)} onChange={e=>setWeights({...weights,[k]:Number(e.target.value)})}/><span>điểm</span></div></label>)}</div>{['admin','leader'].includes(user.role)&&<div className="panel-bottom"><p>Thay đổi trọng số sẽ tính lại điểm của toàn bộ danh mục.</p><button className="primary" disabled={total!==100} onClick={()=>{if(confirm('Áp dụng trọng số mới cho toàn bộ danh mục?'))action('/weights',weights,'PUT')}}>Lưu trọng số</button></div>}</section><div className="notice"><Info size={18}/><span>Điểm giá: 50 + % lợi thế so với giá trung bình đối thủ tương đương, giới hạn 0–100. Điểm lợi nhuận: biên ròng 30% tương ứng 100 điểm. Các tiêu chí khác dùng đánh giá có nguồn. “Độ đầy đủ” là tỷ trọng tiêu chí có dữ liệu, không phải độ chính xác dự báo.</span></div><section className="panel table-wrap"><table><thead><tr><th>Sản phẩm</th><th>Điểm cạnh tranh</th><th>Xếp loại</th><th>Độ đầy đủ</th><th>Dữ liệu cần bổ sung</th></tr></thead><tbody>{products.map(p=><tr key={p.id}><td><button className="table-product" onClick={()=>setDetail(p.id)}><strong>{p.name}</strong><small>{p.code}</small></button></td><td><Score score={p.score}/></td><td>{p.score?.level}</td><td><div className="confidence"><span style={{width:(p.score?.confidence||0)+'%'}}/></div><small>{p.score?.confidence||0}%</small></td><td className="small">{p.score?.missing?.map(k=>D.scoreLabels[k]).join(', ')||'Đã có dữ liệu các tiêu chí'}</td></tr>)}</tbody></table>{!products.length&&<Empty/>}</section></>}
 
-function Opportunities({products,data,user,action,setDetail}){const[state,setState]=useState(''),[editing,setEditing]=useState(null);const gaps=products.filter(p=>!D.own(p)&&p.gap);const can=['admin','leader','purchasing'].includes(user.role);return <><div className="stats three"><Stat label="Chưa có tương đương" value={gaps.filter(p=>p.gap==='confirmed').length} icon={Sparkles} tone="green" note="Danh mục có đủ thông số đối chiếu"/><Stat label="Cần bổ sung dữ liệu" value={gaps.filter(p=>p.gap==='incomplete').length} icon={Info} tone="orange" note="Chưa kết luận khoảng trống sản phẩm"/><Stat label="Đang nghiên cứu / lấy mẫu" value={data.opportunities.filter(p=>['Đang nghiên cứu','Đang lấy mẫu'].includes(p.status)).length} icon={Search} note="Theo trạng thái do người dùng cập nhật"/></div><div className="results-line"><p>Khoảng trống được xác định trong phạm vi danh mục hiện có.</p><select aria-label="Trạng thái cơ hội" value={state} onChange={e=>setState(e.target.value)}><option value="">Tất cả trạng thái</option>{D.opportunityStates.map(s=><option key={s}>{s}</option>)}</select></div>{gaps.length?<div className="opportunity-grid">{gaps.filter(p=>!state||(data.opportunities.find(o=>o.id===p.id)?.status||'Mới phát hiện')===state).map(p=>{const o=data.opportunities.find(o=>o.id===p.id);const enough=D.has(p.demand)&&D.has(p.inventoryRisk)&&D.has(p.assessmentSource);const opportunityScore=enough?Math.round(p.demand*.6+(100-p.inventoryRisk)*.4):null;return <section className="panel opportunity-card" key={p.id}><ProductImage p={p}/><div className="opportunity-body"><div className="inline-actions"><Badge tone={p.gap==='confirmed'?'green':'orange'}>{p.gap==='confirmed'?'Chưa có tương đương':'Chưa thể xác định'}</Badge><Badge>{o?.status||'Mới phát hiện'}</Badge></div><button className="product-title" onClick={()=>setDetail(p.id)}>{p.name}</button><p>{p.brand} · {p.category}</p><p className="small muted">{[p.capacity,p.power,p.material,p.features].filter(Boolean).join(' · ')}</p><dl><div><dt>Giá online / phân khúc</dt><dd>{money(p.online)}</dd></div><div><dt>Mức độ phổ biến</dt><dd>{p.popularity||'Chưa có dữ liệu'}</dd></div><div><dt>Thương hiệu cùng nhóm</dt><dd>{new Set(products.filter(q=>!D.own(q)&&q.category===p.category).map(q=>q.brand)).size}</dd></div>{D.canFinance(user.role)&&<><div><dt>Giá nhập mục tiêu</dt><dd>{money(o?.targetCost)}</dd></div><div><dt>Giá bán đề xuất</dt><dd>{money(o?.suggestedPrice)}</dd></div><div><dt>Lợi nhuận gộp mục tiêu</dt><dd>{D.has(o?.targetCost)&&D.has(o?.suggestedPrice)?money(o.suggestedPrice-o.targetCost):'Chưa đủ dữ liệu'}</dd></div><div><dt>Lợi nhuận ròng mục tiêu</dt><dd>{money(D.finance({...p,cost:o?.targetCost,sale:o?.suggestedPrice}).net)}</dd></div></>}<div><dt>Điểm cơ hội / ưu tiên</dt><dd>{opportunityScore===null?'Chưa đủ dữ liệu':`${opportunityScore}/100 · ${opportunityScore>=80?'Cao':opportunityScore>=60?'Trung bình':'Thấp'}`}</dd></div><div><dt>Rủi ro tồn kho</dt><dd>{D.has(p.inventoryRisk)?p.inventoryRisk+'/100':'Chưa có dữ liệu'}</dd></div></dl><p className="small">{p.gap==='confirmed'?'Lý do: chưa tìm thấy Lock&King đạt ngưỡng tương đồng 50 điểm trong danh mục đủ thông số.':'Bổ sung dữ liệu danh mục trước khi đề xuất nhập.'}</p>{o?.notes&&<p className="notice">{o.notes}</p>}{can&&<button onClick={()=>setEditing({productId:p.id,status:o?.status||'Mới phát hiện',notes:o?.notes||'',targetCost:o?.targetCost??'',suggestedPrice:o?.suggestedPrice??''})}>Cập nhật cơ hội <ChevronRight size={16}/></button>}</div></section>})}</div>:<Empty title="Chưa phát hiện khoảng trống sản phẩm" text="Các đối thủ hiện có đều có ứng viên tương đương hoặc danh mục còn trống."/>}<p className="small muted">Điểm cơ hội = 60% điểm nhu cầu + 40% (100 − rủi ro tồn kho). Chỉ tính khi có đánh giá và nguồn.</p>{editing&&<div className="modal-backdrop"><form className="modal compact" onSubmit={async e=>{e.preventDefault();if(editing.status==='Đã duyệt nhập'&&!confirm('Phê duyệt nhập sản phẩm cơ hội này?'))return;if(await action('/opportunities/'+editing.productId,editing,'PUT'))setEditing(null)}}><div className="modal-head"><h2>Cập nhật cơ hội</h2><IconButton icon={X} label="Đóng" onClick={()=>setEditing(null)}/></div><div className="padded form-grid"><label className="span-2">Trạng thái<select value={editing.status} onChange={e=>setEditing({...editing,status:e.target.value})}>{D.opportunityStates.filter(s=>s!=='Đã duyệt nhập'||['admin','leader'].includes(user.role)).map(s=><option key={s}>{s}</option>)}</select></label><label>Giá nhập mục tiêu<input type="number" min="0" value={editing.targetCost} onChange={e=>setEditing({...editing,targetCost:e.target.value})}/></label><label>Giá bán đề xuất<input type="number" min="0" value={editing.suggestedPrice} onChange={e=>setEditing({...editing,suggestedPrice:e.target.value})}/></label><label className="span-2">Ghi chú, rủi ro và nguồn đánh giá<textarea rows={4} value={editing.notes} onChange={e=>setEditing({...editing,notes:e.target.value})}/></label></div><div className="modal-foot"><button type="button" onClick={()=>setEditing(null)}>Hủy</button><button className="primary">Lưu cập nhật</button></div></form></div>}</>}
+function MissingProductsView(c) {
+  const { products, data, user, setDetail, setPage, setSelected, action, notify } = c;
+  const [search, setSearch] = useState('');
+  const [brandFilter, setBrandFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [priceRange, setPriceRange] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [viewMode, setViewMode] = useState('byBrand');
+  const [editing, setEditing] = useState(null);
+
+  const allMissing = useMemo(() => D.getMissingProducts(products), [products]);
+
+  const brandStats = useMemo(() => {
+    const counts = {};
+    for (const p of allMissing) {
+      if (p.brand) counts[p.brand] = (counts[p.brand] || 0) + 1;
+    }
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [allMissing]);
+
+  const categoryStats = useMemo(() => {
+    const counts = {};
+    for (const p of allMissing) {
+      if (p.category) counts[p.category] = (counts[p.category] || 0) + 1;
+    }
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [allMissing]);
+
+  const filtered = useMemo(() => {
+    return allMissing.filter(p => {
+      if (brandFilter && p.brand !== brandFilter) return false;
+      if (categoryFilter && p.category !== categoryFilter) return false;
+      if (search) {
+        const text = [p.name, p.code, p.brand, p.category, p.capacity, p.power, p.material, p.features].join(' ');
+        if (!D.norm(text).includes(D.norm(search))) return false;
+      }
+      if (priceRange === 'under500' && (p.online || 0) >= 500000) return false;
+      if (priceRange === '500to1000' && ((p.online || 0) < 500000 || (p.online || 0) > 1000000)) return false;
+      if (priceRange === '1000to2000' && ((p.online || 0) < 1000000 || (p.online || 0) > 2000000)) return false;
+      if (priceRange === 'over2000' && (p.online || 0) <= 2000000) return false;
+
+      const opp = data.opportunities?.find(o => o.id === p.id);
+      const currentStatus = opp?.status || 'Mới phát hiện';
+      if (statusFilter && currentStatus !== statusFilter) return false;
+
+      return true;
+    });
+  }, [allMissing, brandFilter, categoryFilter, search, priceRange, statusFilter, data.opportunities]);
+
+  const canEdit = ['admin', 'leader', 'purchasing'].includes(user.role);
+
+  async function handleQuickProposal(p) {
+    if (!confirm(`Gửi sản phẩm ${p.brand} ${p.code} (${p.name}) vào danh sách đề xuất nhập hàng?`)) return;
+    const ok = await action('/proposals/' + p.id, { status: 'Chờ phê duyệt' });
+    if (ok) notify?.(`Đã gửi đề xuất nhập hàng cho ${p.code}!`);
+  }
+
+  async function saveOpportunity(e) {
+    e.preventDefault();
+    if (editing.status === 'Đã duyệt nhập' && !confirm('Phê duyệt nhập sản phẩm cơ hội này?')) return;
+    const ok = await action('/opportunities/' + editing.productId, editing, 'PUT');
+    if (ok) setEditing(null);
+  }
+
+  function exportExcel() {
+    const wb = XLSX.utils.book_new();
+    const allRows = [
+      ['STT', 'Mã sản phẩm', 'Tên sản phẩm', 'Thương hiệu', 'Nhóm ngành hàng', 'Công suất', 'Dung tích / Kích thước', 'Chất liệu', 'Tính năng chính', 'Giá Online (đ)', 'Trạng thái R&D', 'Ghi chú'],
+      ...filtered.map((p, i) => {
+        const opp = data.opportunities?.find(o => o.id === p.id);
+        return [
+          i + 1,
+          p.code || '',
+          p.name || '',
+          p.brand || '',
+          p.category || '',
+          p.power || '',
+          p.capacity || p.dimensions || '',
+          p.material || '',
+          p.features || '',
+          p.online || '',
+          opp?.status || 'Mới phát hiện',
+          opp?.notes || ''
+        ];
+      })
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(allRows);
+    ws['!cols'] = [{ wch: 6 }, { wch: 18 }, { wch: 40 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 22 }, { wch: 30 }, { wch: 45 }, { wch: 18 }, { wch: 18 }, { wch: 30 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'Tong-Hop-Chua-Co');
+
+    const used = new Set(['Tong-Hop-Chua-Co']);
+    const brandsInFiltered = [...new Set(filtered.map(p => p.brand))];
+    for (const b of brandsInFiltered) {
+      const bItems = filtered.filter(p => p.brand === b);
+      const bSheet = XLSX.utils.aoa_to_sheet([
+        ['STT', 'Mã sản phẩm', 'Tên sản phẩm', 'Nhóm ngành hàng', 'Công suất', 'Dung tích / Kích thước', 'Chất liệu', 'Giá Online (đ)', 'Trạng thái'],
+        ...bItems.map((p, idx) => [
+          idx + 1,
+          p.code || '',
+          p.name || '',
+          p.category || '',
+          p.power || '',
+          p.capacity || p.dimensions || '',
+          p.material || '',
+          p.online || '',
+          data.opportunities?.find(o => o.id === p.id)?.status || 'Mới phát hiện'
+        ])
+      ]);
+      bSheet['!cols'] = [{ wch: 6 }, { wch: 18 }, { wch: 40 }, { wch: 20 }, { wch: 15 }, { wch: 22 }, { wch: 30 }, { wch: 18 }, { wch: 18 }];
+      XLSX.utils.book_append_sheet(wb, bSheet, sheetName(b, used));
+    }
+
+    saveFile(
+      XLSX.write(wb, { type: 'array', bookType: 'xlsx' }),
+      'Vu-Gia-San-Pham-LockKing-Chua-Co.xlsx',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    notify?.(`📥 Đã xuất Excel danh sách ${filtered.length} sản phẩm Lock&King chưa có!`);
+  }
+
+  function renderCard(p) {
+    const opp = data.opportunities?.find(o => o.id === p.id);
+    const hasProposal = (data.proposals || []).some(q => q.productId === p.id || q.id === p.id);
+    return (
+      <article className="missing-card" key={p.id}>
+        <div className="missing-card-photo">
+          <button onClick={() => setDetail(p.id)} aria-label={'Xem chi tiết ' + p.name}>
+            <ProductImage p={p} />
+          </button>
+          <Badge tone="violet">{p.brand}</Badge>
+        </div>
+        <div className="missing-card-body">
+          <div className="missing-card-meta">
+            <span>{p.code}</span>
+            <span>{p.category}</span>
+          </div>
+          <button className="missing-card-title" onClick={() => setDetail(p.id)}>
+            {p.name}
+          </button>
+          <p className="missing-card-specs">
+            {[p.capacity || p.dimensions, p.power, p.material].filter(Boolean).join(' · ') || 'Chưa có thông số chi tiết'}
+          </p>
+          <div className="missing-card-price">
+            <small>Giá online tham khảo</small>
+            <strong>{money(p.online)}</strong>
+          </div>
+          <div className="inline-actions" style={{ marginTop: 4 }}>
+            <Badge tone={opp?.status === 'Đã duyệt nhập' ? 'green' : opp?.status ? 'orange' : ''}>
+              {opp?.status || 'Mới phát hiện'}
+            </Badge>
+            {hasProposal && <Badge tone="blue">Đã gửi đề xuất</Badge>}
+          </div>
+          <div className="missing-card-actions">
+            <button
+              className="primary compact"
+              onClick={() => {
+                setSelected([p.id]);
+                setPage('compare');
+              }}
+              title="Đưa vào bảng so sánh"
+            >
+              <ArrowLeftRight size={14} /> So sánh
+            </button>
+            <button
+              className="proposal-highlight-btn compact"
+              onClick={() => handleQuickProposal(p)}
+              title="Đề xuất nhập hàng cho sản phẩm này"
+            >
+              <ShoppingBag size={14} /> Đề xuất
+            </button>
+            {canEdit && (
+              <button
+                className="compact"
+                onClick={() => setEditing({
+                  productId: p.id,
+                  status: opp?.status || 'Mới phát hiện',
+                  notes: opp?.notes || '',
+                  targetCost: opp?.targetCost ?? '',
+                  suggestedPrice: opp?.suggestedPrice ?? ''
+                })}
+                title="Cập nhật tiến độ nghiên cứu / R&D"
+              >
+                <Pencil size={14} />
+              </button>
+            )}
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  return (
+    <div className="missing-products-workspace">
+      <div className="stats">
+        <Stat
+          label="Sản phẩm Lock&King chưa có"
+          value={allMissing.length}
+          icon={Sparkles}
+          tone="green"
+          note={`Tổng từ ${brandStats.length} thương hiệu trên thị trường`}
+        />
+        <Stat
+          label="Thương hiệu đối thủ có SP thiếu"
+          value={`${brandStats.length} hãng`}
+          icon={Building2}
+          tone="violet"
+          note={brandStats.slice(0, 3).map(([b, c]) => `${b} (${c})`).join(', ')}
+        />
+        <Stat
+          label="Nhóm ngành hàng còn khuyết"
+          value={`${categoryStats.length} nhóm`}
+          icon={Boxes}
+          tone="orange"
+          note={categoryStats.slice(0, 2).map(([c, n]) => `${c} (${n})`).join(', ')}
+        />
+        <Stat
+          label="Đang nghiên cứu / Lấy mẫu"
+          value={(data.opportunities || []).filter(p => ['Đang nghiên cứu', 'Đang lấy mẫu', 'Đã duyệt nhập'].includes(p.status)).length}
+          icon={Search}
+          note="Tiến độ R&D và Mua hàng"
+        />
+      </div>
+
+      <div className="brand-filter-pills">
+        <button
+          className={'brand-pill ' + (brandFilter === '' ? 'active' : '')}
+          onClick={() => setBrandFilter('')}
+        >
+          <span>Tất cả các hãng</span>
+          <b>{allMissing.length}</b>
+        </button>
+        {brandStats.map(([brandName, count]) => (
+          <button
+            key={brandName}
+            className={'brand-pill ' + (brandFilter === brandName ? 'active' : '')}
+            onClick={() => setBrandFilter(brandFilter === brandName ? '' : brandName)}
+          >
+            <span>{brandName}</span>
+            <b>{count}</b>
+          </button>
+        ))}
+      </div>
+
+      <div className="filter-panel">
+        <div className="filter-row">
+          <div className="search-field">
+            <Search size={18} />
+            <input
+              aria-label="Tìm sản phẩm chưa có"
+              placeholder="Tìm mã, tên sản phẩm, công suất, chất liệu..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+
+          <select
+            aria-label="Lọc theo nhóm hàng"
+            value={categoryFilter}
+            onChange={e => setCategoryFilter(e.target.value)}
+          >
+            <option value="">Tất cả nhóm ngành hàng ({categoryStats.length})</option>
+            {categoryStats.map(([catName, count]) => (
+              <option key={catName} value={catName}>{catName} ({count})</option>
+            ))}
+          </select>
+
+          <select
+            aria-label="Lọc theo phân khúc giá"
+            value={priceRange}
+            onChange={e => setPriceRange(e.target.value)}
+          >
+            <option value="">Tất cả phân khúc giá</option>
+            <option value="under500">Dưới 500.000 đ</option>
+            <option value="500to1000">500.000 đ – 1.000.000 đ</option>
+            <option value="1000to2000">1.000.000 đ – 2.000.000 đ</option>
+            <option value="over2000">Trên 2.000.000 đ</option>
+          </select>
+
+          <select
+            aria-label="Lọc theo trạng thái R&D"
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+          >
+            <option value="">Tất cả trạng thái R&D</option>
+            {D.opportunityStates.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+
+          <div className="view-toggle">
+            <button
+              className={viewMode === 'byBrand' ? 'active' : ''}
+              onClick={() => setViewMode('byBrand')}
+              title="Gom nhóm theo từng Thương hiệu"
+            >
+              <Building2 size={16} /> Theo Hãng
+            </button>
+            <button
+              className={viewMode === 'byCategory' ? 'active' : ''}
+              onClick={() => setViewMode('byCategory')}
+              title="Gom nhóm theo Nhóm ngành hàng"
+            >
+              <Boxes size={16} /> Theo Ngành
+            </button>
+            <IconButton
+              icon={LayoutDashboard}
+              label="Dạng thẻ lưới"
+              onClick={() => setViewMode('grid')}
+              className={viewMode === 'grid' ? 'active' : ''}
+            />
+            <IconButton
+              icon={FileSpreadsheet}
+              label="Dạng bảng chi tiết"
+              onClick={() => setViewMode('table')}
+              className={viewMode === 'table' ? 'active' : ''}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="results-line">
+        <span>
+          Đang hiển thị <strong>{filtered.length}</strong> / {allMissing.length} sản phẩm Lock&King chưa có
+          {brandFilter && <span> · Hãng: <strong>{brandFilter}</strong></span>}
+          {categoryFilter && <span> · Nhóm: <strong>{categoryFilter}</strong></span>}
+        </span>
+        <div className="inline-actions">
+          {(search || brandFilter || categoryFilter || priceRange || statusFilter) && (
+            <button
+              className="text-button"
+              onClick={() => { setSearch(''); setBrandFilter(''); setCategoryFilter(''); setPriceRange(''); setStatusFilter(''); }}
+            >
+              Đặt lại bộ lọc
+            </button>
+          )}
+          <button className="button" onClick={exportExcel}>
+            <Download size={16} /> Xuất Excel ({filtered.length} SP)
+          </button>
+        </div>
+      </div>
+
+      {!filtered.length ? (
+        <Empty
+          title="Không tìm thấy sản phẩm phù hợp"
+          text="Thử thay đổi từ khóa tìm kiếm hoặc bấm Đặt lại bộ lọc."
+        />
+      ) : viewMode === 'byBrand' ? (
+        <div className="missing-brand-sections">
+          {[...new Set(filtered.map(p => p.brand))].map(brandName => {
+            const bItems = filtered.filter(p => p.brand === brandName);
+            return (
+              <section className="missing-group-box" key={brandName}>
+                <div className="missing-group-head">
+                  <div className="missing-group-title">
+                    <span className="missing-brand-badge">{brandName.slice(0, 1).toUpperCase()}</span>
+                    <div>
+                      <h3>{brandName}</h3>
+                      <span className="small muted">Lock&King đang thiếu <strong>{bItems.length}</strong> sản phẩm so với hãng này</span>
+                    </div>
+                  </div>
+                  <div className="inline-actions">
+                    <button
+                      className="button compact"
+                      onClick={() => {
+                        const wb = XLSX.utils.book_new();
+                        const bRows = [
+                          ['STT', 'Mã SP', 'Tên sản phẩm', 'Nhóm hàng', 'Công suất', 'Dung tích / Kích thước', 'Chất liệu', 'Giá Online', 'Trạng thái'],
+                          ...bItems.map((p, idx) => [
+                            idx + 1, p.code || '', p.name || '', p.category || '', p.power || '', p.capacity || p.dimensions || '', p.material || '', p.online || '',
+                            data.opportunities?.find(o => o.id === p.id)?.status || 'Mới phát hiện'
+                          ])
+                        ];
+                        const ws = XLSX.utils.aoa_to_sheet(bRows);
+                        XLSX.utils.book_append_sheet(wb, ws, brandName);
+                        saveFile(XLSX.write(wb, { type: 'array', bookType: 'xlsx' }), `Vu-Gia-LockKing-Thieu-So-Voi-${brandName}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                        notify?.(`Đã xuất danh sách sản phẩm thiếu so với ${brandName}`);
+                      }}
+                    >
+                      <Download size={14} /> Xuất Excel hãng này
+                    </button>
+                  </div>
+                </div>
+                <div className="missing-group-body">
+                  <div className="missing-grid">
+                    {bItems.map(p => renderCard(p))}
+                  </div>
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      ) : viewMode === 'byCategory' ? (
+        <div className="missing-category-sections">
+          {[...new Set(filtered.map(p => p.category))].map(catName => {
+            const cItems = filtered.filter(p => p.category === catName);
+            return (
+              <section className="missing-group-box" key={catName}>
+                <div className="missing-group-head">
+                  <div className="missing-group-title">
+                    <Boxes size={22} className="text-blue" />
+                    <div>
+                      <h3>{catName || 'Chưa phân nhóm'}</h3>
+                      <span className="small muted">Lock&King đang khuyết <strong>{cItems.length}</strong> sản phẩm thuộc nhóm này</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="missing-group-body">
+                  <div className="missing-grid">
+                    {cItems.map(p => renderCard(p))}
+                  </div>
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      ) : viewMode === 'grid' ? (
+        <div className="missing-grid">
+          {filtered.map(p => renderCard(p))}
+        </div>
+      ) : (
+        <div className="panel table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Ảnh</th>
+                <th>Sản phẩm & Mã</th>
+                <th>Thương hiệu</th>
+                <th>Nhóm ngành hàng</th>
+                <th>Thông số kỹ thuật</th>
+                <th>Giá online</th>
+                <th>Trạng thái R&D</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(p => {
+                const opp = data.opportunities?.find(o => o.id === p.id);
+                return (
+                  <tr key={p.id}>
+                    <td style={{ width: 60 }}>
+                      <button className="photo-button" style={{ width: 48, height: 48 }} onClick={() => setDetail(p.id)}>
+                        <ProductImage p={p} />
+                      </button>
+                    </td>
+                    <td>
+                      <button className="table-product" onClick={() => setDetail(p.id)}>
+                        <strong>{p.name}</strong>
+                        <small>{p.code}</small>
+                      </button>
+                    </td>
+                    <td><Badge tone="violet">{p.brand}</Badge></td>
+                    <td>{p.category}</td>
+                    <td>
+                      <span className="small">
+                        {[p.capacity || p.dimensions, p.power, p.material].filter(Boolean).join(' · ') || '—'}
+                      </span>
+                    </td>
+                    <td><strong>{money(p.online)}</strong></td>
+                    <td>
+                      <Badge tone={opp?.status === 'Đã duyệt nhập' ? 'green' : opp?.status ? 'orange' : ''}>
+                        {opp?.status || 'Mới phát hiện'}
+                      </Badge>
+                    </td>
+                    <td>
+                      <div className="inline-actions">
+                        <button
+                          className="compact primary"
+                          onClick={() => {
+                            setSelected([p.id]);
+                            setPage('compare');
+                          }}
+                        >
+                          So sánh
+                        </button>
+                        <button
+                          className="compact proposal-highlight-btn"
+                          onClick={() => handleQuickProposal(p)}
+                        >
+                          Đề xuất
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {editing && (
+        <div className="modal-backdrop">
+          <form className="modal compact" onSubmit={saveOpportunity}>
+            <div className="modal-head">
+              <h2>Cập nhật tiến độ nghiên cứu & R&D</h2>
+              <IconButton icon={X} label="Đóng" onClick={() => setEditing(null)} />
+            </div>
+            <div className="padded form-grid">
+              <label className="span-2">
+                Trạng thái cơ hội
+                <select
+                  value={editing.status}
+                  onChange={e => setEditing({ ...editing, status: e.target.value })}
+                >
+                  {D.opportunityStates.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </label>
+              <label>
+                Giá nhập mục tiêu (VND)
+                <input
+                  type="number"
+                  min="0"
+                  value={editing.targetCost}
+                  onChange={e => setEditing({ ...editing, targetCost: e.target.value })}
+                  placeholder="Ví dụ: 350000"
+                />
+              </label>
+              <label>
+                Giá bán đề xuất (VND)
+                <input
+                  type="number"
+                  min="0"
+                  value={editing.suggestedPrice}
+                  onChange={e => setEditing({ ...editing, suggestedPrice: e.target.value })}
+                  placeholder="Ví dụ: 650000"
+                />
+              </label>
+              <label className="span-2">
+                Ghi chú đánh giá, đối thủ cạnh tranh & nhà cung cấp
+                <textarea
+                  rows={4}
+                  value={editing.notes}
+                  onChange={e => setEditing({ ...editing, notes: e.target.value })}
+                  placeholder="Ghi chú về thiết kế, ưu điểm vượt trội của đối thủ, thông tin xưởng sản xuất hoặc MOQ..."
+                />
+              </label>
+            </div>
+            <div className="modal-foot">
+              <button type="button" onClick={() => setEditing(null)}>Hủy</button>
+              <button className="primary">Lưu cập nhật</button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+const Opportunities = MissingProductsView;
 
 function Proposals({products,data,user,action,setDetail}){const[filter,setFilter]=useState('');const list=products.filter(D.own).filter(p=>!filter||(data.proposals.find(q=>q.id===p.id)?.status||'Chưa gửi')===filter);return <><div className="notice"><ShieldCheck size={19}/><span>Đề xuất chỉ kết luận khi đủ dữ liệu về điểm cạnh tranh, lợi nhuận, vòng quay vốn và rủi ro tồn kho. Ban lãnh đạo hoặc quản trị viên phê duyệt nhập hàng.</span></div><div className="results-line"><strong>{list.length} sản phẩm</strong><select aria-label="Trạng thái đề xuất" value={filter} onChange={e=>setFilter(e.target.value)}><option value="">Tất cả trạng thái</option><option>Chưa gửi</option><option>Chờ phê duyệt</option><option>Đã duyệt nhập</option><option>Từ chối</option></select></div><section className="panel table-wrap"><table><thead><tr><th>Sản phẩm</th><th>Điểm</th><th>Đề xuất & căn cứ</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{list.map(p=>{const proposal=data.proposals.find(q=>q.id===p.id);return <tr key={p.id}><td><button className="table-product" onClick={()=>setDetail(p.id)}><strong>{p.name}</strong><small>{p.code}</small></button></td><td><Score score={p.score}/></td><td className="recommendation-cell"><Badge tone={p.recommendation?.pending?'orange':'blue'}>{p.recommendation?.label||'Xem với quyền tài chính'}</Badge><p className="small muted">{p.recommendation?.reason||'Chi tiết giá vốn và đánh giá nhập hàng chỉ dành cho bộ phận có quyền.'}</p></td><td><Badge tone={proposal?.status==='Đã duyệt nhập'?'green':''}>{proposal?.status||'Chưa gửi'}</Badge>{proposal&&<p className="small muted">{proposal.by}<br/>{date(proposal.at)}</p>}</td><td><div className="stack-actions">{['admin','leader','sales','purchasing'].includes(user.role)&&<button onClick={()=>action('/proposals/'+p.id,{status:'Chờ phê duyệt'})}>Gửi đề xuất</button>}{['leader','admin'].includes(user.role)&&<><button className="primary" disabled={p.recommendation?.pending} onClick={()=>{if(confirm('Phê duyệt nhập '+p.code+'?'))action('/proposals/'+p.id,{status:'Đã duyệt nhập'})}}>Duyệt nhập</button><button onClick={()=>{const notes=prompt('Lý do từ chối đề xuất:');if(notes!==null)action('/proposals/'+p.id,{status:'Từ chối',notes})}}>Từ chối</button></>}</div></td></tr>})}</tbody></table>{!list.length&&<Empty/>}</section></>}
 

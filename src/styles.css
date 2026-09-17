@@ -3213,3 +3213,243 @@ dd a {
   border-radius: 6px;
 }
 
+/* Missing Products / Lock&King Gaps Section */
+.missing-products-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.brand-filter-pills {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0 10px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.brand-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--slate-200);
+  background: #ffffff;
+  color: var(--slate-700);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.brand-pill:hover {
+  background: var(--slate-100);
+  border-color: var(--slate-300);
+  color: var(--slate-900);
+}
+
+.brand-pill.active {
+  background: var(--blue);
+  color: #ffffff;
+  border-color: var(--blue);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+}
+
+.brand-pill b {
+  font-size: 0.75rem;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: var(--slate-100);
+  color: var(--slate-700);
+}
+
+.brand-pill.active b {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.missing-group-box {
+  background: #ffffff;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.missing-group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--slate-50);
+  border-bottom: 1px solid var(--slate-200);
+}
+
+.missing-group-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.missing-group-title h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--slate-900);
+}
+
+.missing-brand-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.missing-group-body {
+  padding: 20px;
+}
+
+.missing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.missing-card {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.missing-card:hover {
+  transform: translateY(-2px);
+  border-color: #93c5fd;
+  box-shadow: var(--shadow-md);
+}
+
+.missing-card-photo {
+  position: relative;
+  height: 200px;
+  background: var(--slate-100);
+  overflow: hidden;
+}
+
+.missing-card-photo button {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.missing-card-photo .badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+}
+
+.missing-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 16px;
+  gap: 8px;
+}
+
+.missing-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.775rem;
+  color: var(--slate-500);
+  font-weight: 600;
+}
+
+.missing-card-title {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--slate-900);
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.missing-card-title:hover {
+  color: var(--blue);
+}
+
+.missing-card-specs {
+  font-size: 0.8125rem;
+  color: var(--slate-600);
+  line-height: 1.5;
+  background: var(--slate-50);
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--slate-100);
+  margin: 0;
+}
+
+.missing-card-price {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 4px;
+}
+
+.missing-card-price small {
+  color: var(--slate-500);
+  font-size: 0.75rem;
+}
+
+.missing-card-price strong {
+  color: var(--blue);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.missing-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--slate-100);
+}
+
+.missing-card-actions button {
+  flex: 1;
+  font-size: 0.8rem;
+  padding: 8px 10px;
+}
+
+.proposal-highlight-btn {
+  background: linear-gradient(135deg, #059669, #10b981) !important;
+  color: #ffffff !important;
+  border-color: #059669 !important;
+}
+
+.proposal-highlight-btn:hover {
+  background: linear-gradient(135deg, #047857, #059669) !important;
+}
+
+

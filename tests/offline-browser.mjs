@@ -41,7 +41,7 @@ try {
 
   // Go to 'Sản phẩm Lock&King'
   console.log('4. Navigating to own...');
-  await page.locator('.sidebar nav button').filter({hasText: 'Sản phẩm Lock&King'}).click();
+  await page.getByRole('button', {name: 'Sản phẩm Lock&King', exact: true}).click();
   await page.locator('.page-heading h1:has-text("Sản phẩm Lock&King")').waitFor();
   await page.locator('.filter-panel input[aria-label="Tìm sản phẩm"]').fill('LK-668');
   await page.waitForTimeout(300);
@@ -97,10 +97,17 @@ try {
   const testCard = page.locator('.product-card').first();
   await testCard.waitFor();
   assert.equal(await page.locator('.product-card').count(), 1);
-  console.log('Persistence verified.');
+  // 9. Check 'Sản phẩm Lock&King chưa có'
+  console.log('9. Navigating to missing products view...');
+  await page.getByRole('button', {name: 'Sản phẩm Lock&King chưa có', exact: true}).click();
+  await page.locator('.page-heading h1:has-text("Sản phẩm Lock&King chưa có")').waitFor();
+  await page.waitForSelector('.missing-products-workspace');
+  const missingCount = await page.locator('.missing-card').count();
+  assert.ok(missingCount > 50, `Expected many missing products, got ${missingCount}`);
+  console.log(`Verified ${missingCount} missing products on first view.`);
 
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({products: 363, priceRow: 'Lock&King 460000 / Hare 690000', excelSheets: wb.SheetNames.length, persistence: 'passed', errors}));
+  console.log(JSON.stringify({products: 363, priceRow: 'Lock&King 460000 / Hare 690000', excelSheets: wb.SheetNames.length, persistence: 'passed', missingCount, errors}));
 } finally {
   await context.close();
   await browser.close();
